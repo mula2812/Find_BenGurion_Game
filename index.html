@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find Ben-Gurion</title>
+    <title>מצא את בן גוריון</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #87CEEB; /* Sky blue */
+            font-family: Arial, sans-serif;
+            direction: rtl;
         }
 
         #game-container {
@@ -29,14 +29,32 @@
             top: 0;
             left: 0;
             transform-origin: top left;
-            /* Dimensions of the game board will be larger than the screen to allow panning */
-            width: 2000px;
-            height: 1500px;
-            background: linear-gradient(to bottom, #87CEEB 0%, #87CEEB 40%, #1E90FF 40%, #1E90FF 55%, #F4A460 55%, #F4A460 100%);
-            /* 0-40%: Sky, 40-55%: Sea, 55-100%: Beach (Sand) */
+            width: 5000px;
+            height: 4000px;
+            background: linear-gradient(to bottom, 
+                #87CEEB 0%, #87CEEB 15%,
+                #E8F4F8 15%, #E8F4F8 25%,
+                #D4AF37 25%, #D4AF37 35%,
+                #8B7355 35%, #8B7355 50%,
+                #4A90E2 50%, #4A90E2 100%);
         }
 
-        /* SVG Background details can go here or directly in the JS */
+        .landmark-bg {
+            position: absolute;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .landmark-sign {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            border: 2px solid #333;
+            font-weight: bold;
+            pointer-events: none;
+        }
 
         .character {
             position: absolute;
@@ -46,7 +64,12 @@
         }
 
         .character:hover {
-            filter: brightness(1.1);
+            filter: brightness(1.2);
+            transform: scale(1.1);
+        }
+
+        .ben-gurion {
+            border: 2px dashed transparent;
         }
 
         #ui-layer {
@@ -63,23 +86,24 @@
         }
 
         .panel {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 25px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
             pointer-events: auto;
             border: 2px solid #333;
         }
 
         #timer {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: bold;
-            color: #333;
+            color: #E74C3C;
         }
 
         #instructions {
             font-size: 18px;
-            color: #555;
+            color: #2C3E50;
+            font-weight: bold;
         }
 
         #win-modal {
@@ -89,7 +113,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             z-index: 2000;
             justify-content: center;
             align-items: center;
@@ -97,39 +121,62 @@
         }
 
         .modal-content {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 50px;
+            border-radius: 15px;
             text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            border: 4px solid #F4A460;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            border: 4px solid #FFD700;
         }
 
         .modal-content h1 {
-            margin-top: 0;
-            color: #2E8B57; /* Sea green */
-            font-size: 36px;
+            margin: 0;
+            color: #FFD700;
+            font-size: 48px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
 
         .modal-content p {
-            font-size: 20px;
-            color: #333;
+            font-size: 24px;
+            color: white;
+            margin: 15px 0;
         }
 
         button {
-            margin-top: 20px;
-            padding: 12px 24px;
-            font-size: 18px;
-            background-color: #1E90FF;
-            color: white;
+            margin-top: 25px;
+            padding: 15px 40px;
+            font-size: 20px;
+            background-color: #FFD700;
+            color: #333;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.2s;
+            font-weight: bold;
+            transition: all 0.3s;
         }
 
         button:hover {
-            background-color: #0000CD;
+            background-color: #FFA500;
+            transform: scale(1.05);
+        }
+
+        .hint-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            border-radius: 8px;
+            border: 2px solid #667eea;
+            pointer-events: auto;
+            cursor: pointer;
+            font-weight: bold;
+            color: #667eea;
+            z-index: 999;
+        }
+
+        .hint-panel:hover {
+            background: rgba(102, 126, 234, 0.1);
         }
     </style>
 </head>
@@ -137,82 +184,51 @@
 
     <div id="ui-layer">
         <div class="panel" id="instructions">
-            Find <strong>Ben-Gurion</strong>! (Drag to pan)
+            🔍 מצא את בן גוריון במדי החאקי! (גרור לתיקייה)
         </div>
         <div class="panel" id="timer">
-            Time: 00:00
+            ⏱️ 00:00
         </div>
     </div>
 
     <div id="game-container">
         <div id="game-board">
-            <!-- Background SVGs will be added via JS -->
-            <svg id="bg-canvas" width="100%" height="100%" style="position: absolute; top: 0; left: 0; pointer-events: none;">
-                <!-- Sun, clouds, boats, etc. -->
-                <circle cx="1500" cy="200" r="80" fill="#FFD700" />
-                <!-- Clouds -->
-                <path d="M 200 150 Q 220 120 250 150 Q 280 130 300 150 Q 320 170 300 190 L 200 190 Q 180 170 200 150 Z" fill="white" opacity="0.8"/>
-                <path d="M 800 250 Q 820 220 850 250 Q 880 230 900 250 Q 920 270 900 290 L 800 290 Q 780 270 800 250 Z" fill="white" opacity="0.8"/>
-                <path d="M 1200 100 Q 1230 70 1270 100 Q 1310 80 1340 100 Q 1370 130 1340 160 L 1200 160 Q 1170 130 1200 100 Z" fill="white" opacity="0.8"/>
-
-                <!-- Some boats on the sea (Y: 600 to 825) -->
-                <g transform="translate(400, 700)">
-                    <path d="M 0 0 L 20 20 L 80 20 L 100 0 Z" fill="white" />
-                    <path d="M 50 20 L 50 -40 L 90 -10 Z" fill="#FF4500" />
-                </g>
-                <g transform="translate(1400, 750) scale(0.8)">
-                    <path d="M 0 0 L 20 20 L 80 20 L 100 0 Z" fill="white" />
-                    <path d="M 50 20 L 50 -40 L 90 -10 Z" fill="#1E90FF" />
-                </g>
-
-                <!-- Beach Umbrellas to add flavor -->
-                <g transform="translate(300, 900)">
-                    <rect x="-2" y="0" width="4" height="60" fill="#8B4513" />
-                    <path d="M -40 0 Q 0 -30 40 0 Z" fill="#FF6347" />
-                </g>
-                <g transform="translate(800, 1000) scale(1.2)">
-                    <rect x="-2" y="0" width="4" height="60" fill="#8B4513" />
-                    <path d="M -40 0 Q 0 -30 40 0 Z" fill="#32CD32" />
-                </g>
-                <g transform="translate(1600, 1100) scale(1.5)">
-                    <rect x="-2" y="0" width="4" height="60" fill="#8B4513" />
-                    <path d="M -40 0 Q 0 -30 40 0 Z" fill="#FFD700" />
-                </g>
-                <g transform="translate(1200, 1300) scale(1.8)">
-                    <rect x="-2" y="0" width="4" height="60" fill="#8B4513" />
-                    <path d="M -40 0 Q 0 -30 40 0 Z" fill="#FF69B4" />
-                </g>
-            </svg>
-            <div id="characters-container"></div>
+            <!-- Landmark backgrounds and signs -->
         </div>
+    </div>
+
+    <div class="hint-panel" id="hint-panel" onclick="showHint()">
+        💡 קבל רמז
     </div>
 
     <div id="win-modal">
         <div class="modal-content">
-            <h1>You Found Ben-Gurion!</h1>
-            <p>Time: <span id="final-time"></span></p>
-            <button onclick="location.reload()">Play Again</button>
+            <h1>🎉 מצאת את בן גוריון!</h1>
+            <p>זמן: <span id="final-time">00:00</span></p>
+            <p>מצוין! אתה אמיתי חוקר!</p>
+            <button onclick="location.reload()">שחק שוב</button>
         </div>
     </div>
 
     <script>
-        // --- GAME STATE ---
+        // ========== GAME STATE ==========
         let startTime = Date.now();
         let timerInterval;
         let isFound = false;
+        let hints_used = 0;
 
-        // Timer Logic
+        // ========== TIMER LOGIC ==========
         const timerElement = document.getElementById('timer');
         function updateTimer() {
             if (isFound) return;
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
             const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
             const seconds = String(elapsed % 60).padStart(2, '0');
-            timerElement.textContent = `Time: ${minutes}:${seconds}`;
+            timerElement.textContent = `⏱️ ${minutes}:${seconds}`;
         }
         timerInterval = setInterval(updateTimer, 1000);
 
-        // --- PANNING AND ZOOMING LOGIC ---
+        // ========== PANNING AND ZOOMING ==========
         const container = document.getElementById('game-container');
         const board = document.getElementById('game-board');
 
@@ -222,12 +238,10 @@
         let translateY = 0;
         let scale = 1;
 
-        // Initialize board position to center slightly
-        const boardWidth = 2000;
-        const boardHeight = 1500;
+        const boardWidth = 5000;
+        const boardHeight = 4000;
 
         function updateTransform() {
-            // Constrain translation to keep the board on screen
             const minX = container.clientWidth - boardWidth * scale;
             const minY = container.clientHeight - boardHeight * scale;
 
@@ -236,7 +250,6 @@
             if (translateX < minX) translateX = minX;
             if (translateY < minY) translateY = minY;
 
-            // If board is smaller than screen (due to scale), center it
             if (boardWidth * scale < container.clientWidth) {
                 translateX = (container.clientWidth - boardWidth * scale) / 2;
             }
@@ -247,7 +260,6 @@
             board.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
         }
 
-        // Center initially
         translateX = (container.clientWidth - boardWidth) / 2;
         translateY = (container.clientHeight - boardHeight) / 2;
         updateTransform();
@@ -270,19 +282,17 @@
             updateTransform();
         });
 
-        // Optional Zooming
         container.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoomAmount = 0.1;
             const oldScale = scale;
             if (e.deltaY < 0) {
-                scale += zoomAmount; // Zoom in
+                scale += zoomAmount;
             } else {
-                scale -= zoomAmount; // Zoom out
+                scale -= zoomAmount;
             }
-            scale = Math.max(0.5, Math.min(scale, 3)); // Clamp scale
+            scale = Math.max(0.5, Math.min(scale, 3));
 
-            // Adjust translation to zoom towards cursor
             const rect = container.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
@@ -293,72 +303,165 @@
             updateTransform();
         });
 
-        // --- CHARACTER GENERATION ---
+        // ========== CHARACTER GENERATION ==========
 
-        // SVG templates for different character types
-        const svgs = {
-            tourist1: `<svg viewBox="0 0 100 150" width="50" height="75"><circle cx="50" cy="30" r="20" fill="#FFCDB2"/><rect x="35" y="50" width="30" height="40" fill="#FFB4A2"/><path d="M 35 90 L 35 140 L 45 140 L 45 90 Z" fill="#6D6875"/><path d="M 55 90 L 55 140 L 65 140 L 65 90 Z" fill="#6D6875"/><rect x="25" y="55" width="10" height="30" fill="#FFCDB2"/><rect x="65" y="55" width="10" height="30" fill="#FFCDB2"/><path d="M 30 10 Q 50 -10 70 10 Z" fill="#E5989B"/><rect x="40" y="60" width="20" height="15" fill="#333"/></svg>`,
-            tourist2: `<svg viewBox="0 0 100 150" width="50" height="75"><circle cx="50" cy="30" r="20" fill="#F8AD9D"/><rect x="35" y="50" width="30" height="40" fill="#B5838D"/><path d="M 35 90 L 35 140 L 45 140 L 45 90 Z" fill="#E5989B"/><path d="M 55 90 L 55 140 L 65 140 L 65 90 Z" fill="#E5989B"/><rect x="25" y="55" width="10" height="30" fill="#F8AD9D"/><rect x="65" y="55" width="10" height="30" fill="#F8AD9D"/><circle cx="50" cy="15" r="15" fill="#FFB4A2"/></svg>`,
-            soldier: `<svg viewBox="0 0 100 150" width="50" height="75"><circle cx="50" cy="30" r="20" fill="#FFCDB2"/><rect x="35" y="50" width="30" height="40" fill="#556B2F"/><path d="M 35 90 L 35 140 L 45 140 L 45 90 Z" fill="#556B2F"/><path d="M 55 90 L 55 140 L 65 140 L 65 90 Z" fill="#556B2F"/><rect x="25" y="55" width="10" height="30" fill="#556B2F"/><rect x="65" y="55" width="10" height="30" fill="#556B2F"/><path d="M 30 15 Q 50 0 70 15 L 65 25 L 35 25 Z" fill="#556B2F"/><rect x="70" y="60" width="5" height="40" fill="#333"/></svg>`,
-            beachgoer1: `<svg viewBox="0 0 100 150" width="50" height="75"><circle cx="50" cy="30" r="20" fill="#E0AC69"/><rect x="35" y="50" width="30" height="40" fill="#FF4500"/><path d="M 35 90 L 35 140 L 45 140 L 45 90 Z" fill="#E0AC69"/><path d="M 55 90 L 55 140 L 65 140 L 65 90 Z" fill="#E0AC69"/><rect x="25" y="55" width="10" height="30" fill="#E0AC69"/><rect x="65" y="55" width="10" height="30" fill="#E0AC69"/><circle cx="50" cy="28" r="15" fill="none" stroke="black" stroke-width="2"/><line x1="35" y1="28" x2="65" y2="28" stroke="black" stroke-width="2"/></svg>`,
-            beachgoer2: `<svg viewBox="0 0 100 150" width="50" height="75"><circle cx="50" cy="30" r="20" fill="#8D5524"/><rect x="35" y="50" width="30" height="20" fill="#00CED1"/><path d="M 35 90 L 35 140 L 45 140 L 45 90 Z" fill="#8D5524"/><path d="M 55 90 L 55 140 L 65 140 L 65 90 Z" fill="#8D5524"/><rect x="25" y="55" width="10" height="30" fill="#8D5524"/><rect x="65" y="55" width="10" height="30" fill="#8D5524"/><path d="M 35 70 L 65 70 L 65 90 L 35 90 Z" fill="#FF1493"/></svg>`,
-            kid: `<svg viewBox="0 0 80 120" width="40" height="60"><circle cx="40" cy="24" r="16" fill="#FFDCB3"/><rect x="28" y="40" width="24" height="32" fill="#FFD700"/><path d="M 28 72 L 28 112 L 36 112 L 36 72 Z" fill="#1E90FF"/><path d="M 44 72 L 44 112 L 52 112 L 52 72 Z" fill="#1E90FF"/><rect x="20" y="44" width="8" height="24" fill="#FFDCB3"/><rect x="52" y="44" width="8" height="24" fill="#FFDCB3"/><circle cx="40" cy="12" r="12" fill="#8B4513"/></svg>`,
-            ben_gurion: `<svg viewBox="0 0 100 150" width="50" height="75">
-                <!-- Ben-Gurion -->
-                <!-- Head -->
-                <circle cx="50" cy="30" r="20" fill="#FFCDB2"/>
-                <!-- Iconic white tufts of hair -->
-                <path d="M 25 30 Q 15 15 35 10 Q 30 20 28 30 Z" fill="white"/>
-                <path d="M 75 30 Q 85 15 65 10 Q 70 20 72 30 Z" fill="white"/>
-                <!-- Khaki Suit -->
-                <rect x="35" y="50" width="30" height="40" fill="#C3B091"/>
-                <path d="M 35 90 L 35 140 L 45 140 L 45 90 Z" fill="#C3B091"/>
-                <path d="M 55 90 L 55 140 L 65 140 L 65 90 Z" fill="#C3B091"/>
-                <rect x="25" y="55" width="10" height="30" fill="#C3B091"/>
-                <rect x="65" y="55" width="10" height="30" fill="#C3B091"/>
-                <!-- Tie / Collar detail -->
-                <path d="M 45 50 L 55 50 L 50 60 Z" fill="white"/>
-                <path d="M 48 60 L 52 60 L 50 75 Z" fill="#333"/>
+        const benGurionSVG = `<svg viewBox="0 0 100 150" width="55" height="85">
+            <!-- Head -->
+            <circle cx="50" cy="35" r="22" fill="#D4A574"/>
+            <!-- Iconic white hair - two tufts -->
+            <path d="M 25 28 Q 20 8 40 12 Q 35 22 30 28 Z" fill="white" stroke="#999" stroke-width="1"/>
+            <path d="M 75 28 Q 80 8 60 12 Q 65 22 70 28 Z" fill="white" stroke="#999" stroke-width="1"/>
+            <!-- Eyes -->
+            <circle cx="45" cy="32" r="2" fill="#333"/>
+            <circle cx="55" cy="32" r="2" fill="#333"/>
+            <!-- Mouth -->
+            <path d="M 45 42 Q 50 45 55 42" stroke="#333" stroke-width="1.5" fill="none"/>
+            <!-- Khaki military uniform jacket -->
+            <rect x="32" y="58" width="36" height="50" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
+            <!-- Buttons -->
+            <circle cx="50" cy="65" r="2" fill="#666"/>
+            <circle cx="50" cy="75" r="2" fill="#666"/>
+            <circle cx="50" cy="85" r="2" fill="#666"/>
+            <!-- Collar -->
+            <path d="M 40 58 L 35 70 L 50 65 Z" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
+            <path d="M 60 58 L 65 70 L 50 65 Z" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
+            <!-- Sleeves -->
+            <rect x="32" y="60" width="6" height="35" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
+            <rect x="62" y="60" width="6" height="35" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
+            <!-- Pants -->
+            <path d="M 40 108 L 38 150 L 45 150 L 47 108 Z" fill="#8B7355" stroke="#666" stroke-width="1"/>
+            <path d="M 60 108 L 62 150 L 55 150 L 53 108 Z" fill="#8B7355" stroke="#666" stroke-width="1"/>
+            <!-- Shoes -->
+            <ellipse cx="41" cy="150" rx="4" ry="2" fill="#333"/>
+            <ellipse cx="59" cy="150" rx="4" ry="2" fill="#333"/>
+            <!-- Service medals on chest -->
+            <rect x="48" y="70" width="4" height="6" fill="#DC143C"/>
+            <rect x="45" y="72" width="3" height="5" fill="#FFD700"/>
+            <rect x="53" y="72" width="3" height="5" fill="#FFD700"/>
+        </svg>`;
+
+        const otherCharacters = [
+            // Israeli civilian man
+            `<svg viewBox="0 0 100 150" width="50" height="75">
+                <circle cx="50" cy="30" r="18" fill="#D4A574"/>
+                <path d="M 32 30 L 28 50 L 72 50 L 68 30 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <rect x="32" y="50" width="36" height="45" fill="#4A90E2" stroke="#333" stroke-width="1"/>
+                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <ellipse cx="35" cy="150" rx="3" ry="2" fill="#222"/>
+                <ellipse cx="65" cy="150" rx="3" ry="2" fill="#222"/>
+            </svg>`,
+            
+            // Israeli soldier
+            `<svg viewBox="0 0 100 150" width="50" height="75">
+                <circle cx="50" cy="30" r="18" fill="#D4A574"/>
+                <rect x="35" y="28" width="30" height="6" fill="#333" rx="2"/>
+                <rect x="32" y="50" width="36" height="45" fill="#556B2F" stroke="#333" stroke-width="1"/>
+                <circle cx="45" cy="65" r="2.5" fill="#8B7355"/>
+                <circle cx="55" cy="65" r="2.5" fill="#8B7355"/>
+                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#556B2F" stroke="#333" stroke-width="1"/>
+                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#556B2F" stroke="#333" stroke-width="1"/>
+                <ellipse cx="35" cy="150" rx="3" ry="2" fill="#222"/>
+                <ellipse cx="65" cy="150" rx="3" ry="2" fill="#222"/>
+            </svg>`,
+            
+            // Woman with headscarf
+            `<svg viewBox="0 0 100 150" width="50" height="75">
+                <circle cx="50" cy="30" r="18" fill="#D4A574"/>
+                <path d="M 32 22 Q 50 15 68 22 Q 70 30 50 32 Q 30 30 32 22 Z" fill="#E74C3C" stroke="#C0392B" stroke-width="1"/>
+                <rect x="32" y="50" width="36" height="45" fill="#E8DAEF" stroke="#333" stroke-width="1"/>
+                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <ellipse cx="35" cy="150" rx="3" ry="2" fill="#222"/>
+                <ellipse cx="65" cy="150" rx="3" ry="2" fill="#222"/>
+            </svg>`,
+            
+            // Child
+            `<svg viewBox="0 0 80 120" width="40" height="60">
+                <circle cx="40" cy="25" r="14" fill="#D4A574"/>
+                <path d="M 26 25 L 22 35 L 58 35 L 54 25 Z" fill="#8B4513" stroke="#654321" stroke-width="0.5"/>
+                <rect x="26" y="38" width="28" height="35" fill="#FFD700" stroke="#333" stroke-width="0.5"/>
+                <path d="M 26 73 L 24 120 L 32 120 L 34 73 Z" fill="#333" stroke="#222" stroke-width="0.5"/>
+                <path d="M 54 73 L 56 120 L 48 120 L 46 73 Z" fill="#333" stroke="#222" stroke-width="0.5"/>
+            </svg>`,
+            
+            // Elderly person with cane
+            `<svg viewBox="0 0 100 160" width="50" height="80">
+                <circle cx="50" cy="32" r="17" fill="#C4A57B"/>
+                <path d="M 35 32 L 30 50 L 70 50 L 65 32 Z" fill="white" stroke="#999" stroke-width="1"/>
+                <rect x="34" y="52" width="32" height="40" fill="#7F8C8D" stroke="#333" stroke-width="1"/>
+                <path d="M 34 92 L 32 155 L 40 155 L 42 92 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <path d="M 66 92 L 68 155 L 60 155 L 58 92 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <line x1="20" y1="50" x2="18" y2="155" stroke="#8B4513" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="17" cy="155" r="2" fill="#666"/>
+            </svg>`,
+            
+            // Tourist with camera
+            `<svg viewBox="0 0 100 150" width="50" height="75">
+                <circle cx="50" cy="30" r="18" fill="#E0AC69"/>
+                <rect x="35" y="28" width="30" height="5" fill="#FFD700" stroke="#FFA500" stroke-width="0.5"/>
+                <rect x="32" y="50" width="36" height="45" fill="#FF6B6B" stroke="#333" stroke-width="1"/>
+                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
+                <circle cx="72" cy="60" r="8" fill="#333" stroke="#222" stroke-width="1"/>
+                <circle cx="73" cy="60" r="5" fill="#666"/>
+            </svg>`,
+            
+            // Man in traditional attire
+            `<svg viewBox="0 0 100 150" width="50" height="75">
+                <circle cx="50" cy="30" r="18" fill="#8D5524"/>
+                <path d="M 32 28 L 30 50 L 70 50 L 68 28 Z" fill="#8B4513" stroke="#654321" stroke-width="1"/>
+                <rect x="32" y="50" width="36" height="45" fill="#2C1810" stroke="#1a0f0a" stroke-width="1"/>
+                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#2C1810" stroke="#1a0f0a" stroke-width="1"/>
+                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#2C1810" stroke="#1a0f0a" stroke-width="1"/>
+                <circle cx="50" cy="60" r="3" fill="#FFD700"/>
             </svg>`
-        };
+        ];
 
-        const charKeys = Object.keys(svgs).filter(k => k !== 'ben_gurion');
+        const spawnZones = [
+            // Knesset area (Jerusalem)
+            { minX: 200, maxX: 600, minY: 300, maxY: 800, landmark: "הכנסת" },
+            // Western Wall (Jerusalem)
+            { minX: 700, maxX: 1100, minY: 400, maxY: 900, landmark: "הכותל" },
+            // Tel Aviv beach
+            { minX: 1200, maxX: 1700, minY: 1500, maxY: 2000, landmark: "תל אביב" },
+            // Jaffa
+            { minX: 1800, maxX: 2200, minY: 1600, maxY: 2100, landmark: "יפו" },
+            // Dead Sea
+            { minX: 2300, maxX: 2800, minY: 1800, maxY: 2400, landmark: "ים המלח" },
+            // Masada
+            { minX: 2900, maxX: 3400, minY: 2100, maxY: 2600, landmark: "מצדה" },
+            // Eilat
+            { minX: 3500, maxX: 4000, minY: 2500, maxY: 3200, landmark: "אילת" },
+            // Hebrew University area
+            { minX: 800, maxX: 1300, minY: 1000, maxY: 1500, landmark: "האוניברסיטה" },
+            // Haifa area
+            { minX: 600, maxX: 1000, minY: 1200, maxY: 1700, landmark: "חיפה" }
+        ];
 
-        const containerDiv = document.getElementById('characters-container');
-
-        // Spawn Zones Configuration
-        // The scene is a beach. Background gradient: 0-40% Sky, 40-55% Sea, 55-100% Sand.
-        // Therefore, walkable area (sand) is from Y = 825px to 1500px.
-        const spawnZone = {
-            minX: 50,
-            maxX: 1950,
-            minY: 850, // Start of the sand
-            maxY: 1450 // Bottom of the board
-        };
-
+        const containerDiv = document.getElementById('characters-container') || board;
         const characters = [];
-        const numCharacters = 400; // Dense crowd
+        const numCharacters = 600;
+        
+        let benGurionPosition = null;
 
-        // Generate characters with overlap prevention and depth scaling
+        // Generate characters
         for (let i = 0; i < numCharacters; i++) {
             let validPosition = false;
-            let x, y, scaleRatio;
+            let x, y, scaleRatio, zone;
             let attempts = 0;
 
-            // Try to find a non-overlapping spot
             while (!validPosition && attempts < 100) {
-                x = spawnZone.minX + Math.random() * (spawnZone.maxX - spawnZone.minX);
-                y = spawnZone.minY + Math.random() * (spawnZone.maxY - spawnZone.minY);
+                zone = spawnZones[Math.floor(Math.random() * spawnZones.length)];
+                x = zone.minX + Math.random() * (zone.maxX - zone.minX);
+                y = zone.minY + Math.random() * (zone.maxY - zone.minY);
 
-                // Check distance to all other characters to prevent messy overlaps
                 validPosition = true;
                 for (const char of characters) {
                     const dx = char.x - x;
                     const dy = char.y - y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-
-                    // Allow some overlap, especially vertical (y), but prevent them from being exactly on top of each other
-                    if (dist < 25) {
+                    if (dist < 30) {
                         validPosition = false;
                         break;
                     }
@@ -366,46 +469,63 @@
                 attempts++;
             }
 
-            // Layering / Perspective:
-            // Further up the screen (smaller Y) means smaller scale.
-            // Y goes from 850 to 1450.
-            const depth = (y - spawnZone.minY) / (spawnZone.maxY - spawnZone.minY); // 0 to 1
-            scaleRatio = 0.5 + depth * 0.8; // Scales from 0.5 to 1.3
+            const depth = (y - zone.minY) / (zone.maxY - zone.minY);
+            scaleRatio = 0.6 + depth * 0.7;
 
+            const isBenGurion = i === Math.floor(numCharacters * 0.35); // Hide him mid-crowd
+            
             characters.push({
                 id: `char-${i}`,
-                type: i === 0 ? 'ben_gurion' : charKeys[Math.floor(Math.random() * charKeys.length)],
+                type: isBenGurion ? 'ben_gurion' : otherCharacters[Math.floor(Math.random() * otherCharacters.length)],
                 x: x,
                 y: y,
                 scale: scaleRatio,
-                zIndex: Math.floor(y) // Higher Y (closer) = higher z-index
+                zIndex: Math.floor(y),
+                isBenGurion: isBenGurion,
+                zone: zone.landmark
             });
+
+            if (isBenGurion) {
+                benGurionPosition = { x, y, zone: zone.landmark };
+            }
         }
 
-        // We want Ben-Gurion to be hidden well, maybe randomize his position in the array
-        // actually he is char-0, let's make sure his position isn't always the first generated spot?
-        // It's random anyway.
-
-        // Sort characters by Y (z-index) so DOM paints them back-to-front
         characters.sort((a, b) => a.y - b.y);
+
+        // Add landmark signs
+        spawnZones.forEach(zone => {
+            const sign = document.createElement('div');
+            sign.className = 'landmark-sign';
+            sign.textContent = zone.landmark;
+            sign.style.left = `${(zone.minX + zone.maxX) / 2}px`;
+            sign.style.top = `${zone.minY - 30}px`;
+            board.appendChild(sign);
+        });
 
         // Render characters
         characters.forEach(char => {
             const el = document.createElement('div');
-            el.className = 'character';
-            el.innerHTML = svgs[char.type];
-            el.style.left = `${char.x - 25}px`; // Center horizontally (width 50)
-            el.style.top = `${char.y - 75}px`; // Align bottom (height 75)
+            el.className = 'character' + (char.isBenGurion ? ' ben-gurion' : '');
+            
+            if (char.isBenGurion) {
+                el.innerHTML = benGurionSVG;
+            } else {
+                el.innerHTML = char.type;
+            }
+            
+            el.style.left = `${char.x - 27}px`;
+            el.style.top = `${char.y - 85}px`;
             el.style.transform = `scale(${char.scale})`;
             el.style.zIndex = char.zIndex;
 
-            // Flip randomly for variety
             if (Math.random() > 0.5) {
                 const svgEl = el.querySelector('svg');
-                svgEl.style.transform = 'scaleX(-1)';
+                if (svgEl) {
+                    svgEl.style.transform = 'scaleX(-1)';
+                }
             }
 
-            if (char.type === 'ben_gurion') {
+            if (char.isBenGurion) {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (isFound) return;
@@ -417,23 +537,39 @@
                     document.getElementById('final-time').textContent = `${minutes}:${seconds}`;
                     document.getElementById('win-modal').style.display = 'flex';
                 });
-
-                // For debug purposes, to quickly find him during testing
-                // el.style.border = "1px solid red";
             } else {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    // Clicked wrong person, maybe visual feedback?
-                    el.style.transform = `scale(${char.scale}) rotate(10deg)`;
+                    el.style.filter = 'brightness(0.8)';
                     setTimeout(() => {
-                        el.style.transform = `scale(${char.scale}) rotate(0deg)`;
-                    }, 200);
+                        el.style.filter = 'brightness(1)';
+                    }, 300);
                 });
             }
 
-            containerDiv.appendChild(el);
+            board.appendChild(el);
         });
 
+        // Hint system
+        const hints = [
+            "בן גוריון לובש מדי חאקי וצבע הפנים שלו קצת כהה",
+            "אתה מחפש אדם בגיל מבוגר עם שערות לבנות מאוד מיוחדות!",
+            "הוא קרוב לאילת או לים המלח",
+            "תראה בשכבה של אנשים קצת יותר קרוב לקדמית",
+            `בן גוריון מסתתר בסביבת ${benGurionPosition?.zone || 'אתר כלשהו'}!`
+        ];
+
+        function showHint() {
+            if (isFound || hints_used >= hints.length) return;
+            const hint = hints[hints_used];
+            alert(`💡 רמז: ${hint}`);
+            hints_used++;
+        }
+
+        document.getElementById('hint-panel').addEventListener('click', showHint);
+
+        // Disable right-click
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
     </script>
 </body>
 </html>
