@@ -1,418 +1,530 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find Ben-Gurion</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Where's Ben-Gurion?</title>
     <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #111;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background-color: #000;
+}
 
-        #ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            pointer-events: none;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+#ui-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    box-sizing: border-box;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
 
-        .panel {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            pointer-events: auto;
-            border: 2px solid #ccc;
-        }
+#ui-layer h1 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
 
-        h1 {
-            margin: 0 0 5px 0;
-            font-size: 24px;
-            color: #0038b8; /* Israeli blue */
-        }
+#level-indicator {
+    font-size: 18px;
+    font-weight: bold;
+    color: #e53935;
+}
 
-        p {
-            margin: 0;
-            font-size: 14px;
-            color: #333;
-        }
+#timer {
+    font-size: 20px;
+    font-weight: bold;
+    color: #e53935;
+}
 
-        #timer {
-            font-size: 28px;
-            font-weight: bold;
-            color: #333;
-            font-family: monospace;
-        }
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+}
 
-        #game-container {
-            width: 100vw;
-            height: 100vh;
-            cursor: grab;
-            position: relative;
-        }
+#game-container:active {
+    cursor: grabbing;
+}
 
-        #game-container:active {
-            cursor: grabbing;
-        }
+#game-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+}
 
-        #game-board {
-            width: 2500px;
-            height: 1667px;
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/5/5b/Mahane_Yehuda_%28I%29_%2845298221191%29.jpg');
-            background-size: cover;
-            background-position: center;
-            position: absolute;
-            transform-origin: 0 0;
-            /* Prevent image dragging */
-            user-select: none;
-            -webkit-user-drag: none;
-        }
+.character {
+    position: absolute;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
 
-        .character {
-            position: absolute;
-            cursor: pointer;
-            transition: transform 0.2s;
-            /* Masking Strategy: Circular cutouts like a photo collage to cleanly fit rectangular photos */
-            border-radius: 50%;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-            border: 3px solid white;
-            background-size: cover;
-            background-position: top center;
-            background-color: #eee;
-        }
+.character:hover {
+    filter: brightness(1.2);
+}
 
-        .character:hover {
-            filter: brightness(1.2);
-        }
+/* Modals */
+#modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
-        /* Specific style for Ben Gurion to ensure the face is centered */
-        .ben-gurion {
-            background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/e8/David_Ben-Gurion_%28D597-087%29.jpg');
-            background-position: center 20%;
-        }
+.modal {
+    background-color: white;
+    padding: 30px 50px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
 
-        #win-modal {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 2000;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-align: center;
-        }
+.modal h2 {
+    margin-top: 0;
+    color: #e53935;
+    font-size: 28px;
+}
 
-        #win-modal h2 {
-            font-size: 48px;
-            color: #FFD700;
-            margin-bottom: 10px;
-        }
+.modal p {
+    font-size: 18px;
+    color: #333;
+}
 
-        #win-modal p {
-            font-size: 24px;
-            color: white;
-            margin-bottom: 30px;
-        }
+.modal button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    font-size: 16px;
+    background-color: #1e88e5;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
 
-        button {
-            padding: 15px 30px;
-            font-size: 18px;
-            cursor: pointer;
-            background: #0038b8;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-        }
+.modal button:hover {
+    background-color: #1565c0;
+}
 
-        button:hover {
-            background: #002888;
-        }
+.hidden {
+    display: none !important;
+}
 
-        /* Instructions */
-        .instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
-            pointer-events: none;
-            z-index: 1000;
-            font-size: 14px;
-        }
-
-    </style>
-</head>
-<body>
-
+</style>
+  </head>
+  <body>
     <div id="ui-layer">
-        <div class="panel">
-            <h1>Find Ben-Gurion!</h1>
-            <p>He's hiding in Mahane Yehuda Market.</p>
+      <div id="top-bar">
+        <h1>Where's Ben-Gurion?</h1>
+        <div id="level-indicator">
+          Level: <span id="current-level-name">Western Wall</span>
         </div>
-        <div class="panel">
-            <div id="timer">00:00</div>
-        </div>
-    </div>
-
-    <div class="instructions">
-        Scroll to Zoom | Click & Drag to Pan
+        <div id="timer">00:00</div>
+      </div>
     </div>
 
     <div id="game-container">
-        <div id="game-board">
-            <div id="characters-container"></div>
-        </div>
+      <!-- Background and characters will be injected here by JS -->
+      <div id="game-world"></div>
     </div>
 
-    <div id="win-modal">
-        <h2>Kol Hakavod!</h2>
-        <p>You found Ben-Gurion in <span id="final-time"></span>!</p>
-        <button onclick="location.reload()">Play Again</button>
+    <!-- Modals -->
+    <div id="modal-overlay" class="hidden">
+      <div id="win-modal" class="modal">
+        <h2>You Found Him!</h2>
+        <p>Time: <span id="final-time"></span></p>
+        <button id="next-level-btn">Next Level</button>
+      </div>
+      <div id="game-over-modal" class="modal hidden">
+        <h2>Congratulations!</h2>
+        <p>You have found Ben-Gurion in all locations.</p>
+        <button id="restart-btn">Play Again</button>
+      </div>
     </div>
 
-    <script>
-        // --- TIMER ---
-        let startTime = Date.now();
-        let timerInterval;
-        let isFound = false;
 
-        function updateTimer() {
-            if (isFound) return;
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            const seconds = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('timer').textContent = `${minutes}:${seconds}`;
-        }
-        timerInterval = setInterval(updateTimer, 1000);
+  <script>
+const levels = [
+  {
+    name: "Western Wall",
+    background: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIj4KICAgIDxkZWZzPgogICAgICAgIDwhLS0gV2FsbCBzdG9uZSBwYXR0ZXJuIC0tPgogICAgICAgIDxwYXR0ZXJuIGlkPSJzdG9uZXMiIHdpZHRoPSIxMDAiIGhlaWdodD0iNTAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICAgICAgICA8cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjZThkOGI3IiBzdHJva2U9IiNiZGE1NzQiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgICAgICAgICA8cmVjdCB4PSI1MCIgeT0iMjUiIHdpZHRoPSIxMDAiIGhlaWdodD0iNTAiIGZpbGw9IiNlOGQ4YjciIHN0cm9rZT0iI2JkYTU3NCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICAgICAgPC9wYXR0ZXJuPgogICAgICAgIDwhLS0gRmxvb3IgcGF2aW5nIHBhdHRlcm4gLS0+CiAgICAgICAgPHBhdHRlcm4gaWQ9InBhdmluZyIgd2lkdGg9IjgwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgICAgICAgPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZDBjOGIwIiBzdHJva2U9IiNhMDk4ODAiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgICAgICAgICA8cmVjdCB4PSI0MCIgeT0iMjAiIHdpZHRoPSI4MCIgaGVpZ2h0PSI0MCIgZmlsbD0iI2QwYzhiMCIgc3Ryb2tlPSIjYTA5ODgwIiBzdHJva2Utd2lkdGg9IjEiLz4KICAgICAgICA8L3BhdHRlcm4+CiAgICA8L2RlZnM+CgogICAgPCEtLSBTa3kgLS0+CiAgICA8cmVjdCB3aWR0aD0iMTYwMCIgaGVpZ2h0PSI5MDAiIGZpbGw9IiM4N0NFRUIiLz4KICAgIAogICAgPCEtLSBTdW4gLS0+CiAgICA8Y2lyY2xlIGN4PSIxNDAwIiBjeT0iMTUwIiByPSI4MCIgZmlsbD0iI0ZGRDcwMCIgb3BhY2l0eT0iMC44Ii8+CgogICAgPCEtLSBCYWNrZ3JvdW5kIEJ1aWxkaW5ncyAvIERvbWVzIC0tPgogICAgPHBhdGggZD0iTSAxMDAgMzAwIFEgMjAwIDIwMCAzMDAgMzAwIFoiIGZpbGw9IiNiY2FhYTQiLz4KICAgIDxwYXRoIGQ9Ik0gNDAwIDI1MCBRIDUwMCAxNTAgNjAwIDI1MCBaIiBmaWxsPSIjYmNhYWE0Ii8+CiAgICA8cGF0aCBkPSJNIDEyMDAgMjgwIFEgMTMwMCAxODAgMTQwMCAyODAgWiIgZmlsbD0iI2JjYWFhNCIvPgogICAgCiAgICA8IS0tIFRoZSBXZXN0ZXJuIFdhbGwgLS0+CiAgICA8cmVjdCB4PSIwIiB5PSIyMDAiIHdpZHRoPSIxNjAwIiBoZWlnaHQ9IjQwMCIgZmlsbD0idXJsKCNzdG9uZXMpIi8+CiAgICAKICAgIDwhLS0gR3Jhc3Mvd2VlZHMgZ3Jvd2luZyBmcm9tIHRoZSB3YWxsIC0tPgogICAgPHBhdGggZD0iTSAzMDAgNDAwIFEgMzEwIDQyMCAzMjAgNDAwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyZThiNTciIHN0cm9rZS13aWR0aD0iMyIvPgogICAgPHBhdGggZD0iTSA3NTAgMzUwIFEgNzYwIDM3MCA3NzAgMzUwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyZThiNTciIHN0cm9rZS13aWR0aD0iMyIvPgogICAgPHBhdGggZD0iTSAxMTAwIDQ1MCBRIDExMTAgNDcwIDExMjAgNDUwIiBmaWxsPSJub25lIiBzdHJva2U9IiMyZThiNTciIHN0cm9rZS13aWR0aD0iMyIvPgoKICAgIDwhLS0gVGhlIFBsYXphIEZsb29yIChXYWxrYWJsZSBBcmVhKSAtLT4KICAgIDwhLS0gQ3JlYXRpbmcgcGVyc3BlY3RpdmU6IHdpZGVyIGF0IGJvdHRvbSwgbmFycm93ZXIgYXQgdG9wIC0tPgogICAgPHBvbHlnb24gcG9pbnRzPSIwLDYwMCAxNjAwLDYwMCAxNjAwLDkwMCAwLDkwMCIgZmlsbD0idXJsKCNwYXZpbmcpIi8+CiAgICAKICAgIDwhLS0gTWVjaGl0emEgKERpdmlkZXIpIC0tPgogICAgPHJlY3QgeD0iODAwIiB5PSI2MDAiIHdpZHRoPSIyMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiM4YjQ1MTMiLz4KICAgIDxsaW5lIHgxPSI4MTAiIHkxPSI2MDAiIHgyPSI4MTAiIHkyPSI5MDAiIHN0cm9rZT0iIzY1NDMyMSIgc3Ryb2tlLXdpZHRoPSI0Ii8+Cjwvc3ZnPg==",
+    // Trapezoid area for perspective. Array of [x, y] coordinates in logical map space (1600x900)
+    // Spawn Zones for realistic positioning
+        walkableArea: [
+      [0, 600],
+      [1600, 600],
+      [1600, 900],
+      [0, 900],
+    ],
+    numCharacters: 100,
+    baseScale: 1.0, // scale at the bottom
+    minScale: 0.5, // scale at the top
+  },
+  {
+    name: "Tel Aviv Beach",
+    background: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIj4KICAgIDwhLS0gU2t5IC0tPgogICAgPHJlY3Qgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIiBmaWxsPSIjNGZjM2Y3Ii8+CiAgICAKICAgIDwhLS0gU3VuIC0tPgogICAgPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTUwIiByPSI2MCIgZmlsbD0iI2ZmZjU5ZCIvPgoKICAgIDwhLS0gU2VhIC0tPgogICAgPHJlY3QgeD0iMCIgeT0iMzAwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMwMjg4ZDEiLz4KICAgIAogICAgPCEtLSBXYXZlcyAtLT4KICAgIDxwYXRoIGQ9Ik0gMCA0MDAgUSAxMDAgMzgwIDIwMCA0MDAgVCA0MDAgNDAwIFQgNjAwIDQwMCBUIDgwMCA0MDAgVCAxMDAwIDQwMCBUIDEyMDAgNDAwIFQgMTQwMCA0MDAgVCAxNjAwIDQwMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDNhOWY0IiBzdHJva2Utd2lkdGg9IjQiLz4KICAgIDxwYXRoIGQ9Ik0gMCA0NTAgUSAxMDAgNDMwIDIwMCA0NTAgVCA0MDAgNDUwIFQgNjAwIDQ1MCBUIDgwMCA0NTAgVCAxMDAwIDQ1MCBUIDEyMDAgNDUwIFQgMTQwMCA0NTAgVCAxNjAwIDQ1MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDNhOWY0IiBzdHJva2Utd2lkdGg9IjQiLz4KCiAgICA8IS0tIFNhbmQgKFdhbGthYmxlIEFyZWEpIC0tPgogICAgPHJlY3QgeD0iMCIgeT0iNTAwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNmNWRlYjMiLz4KICAgIAogICAgPCEtLSBMaWZlZ3VhcmQgVG93ZXIgLS0+CiAgICA8cmVjdCB4PSIxMjAwIiB5PSIyNTAiIHdpZHRoPSIxNTAiIGhlaWdodD0iMjUwIiBmaWxsPSIjZTBlMGUwIiBzdHJva2U9IiM5ZTllOWUiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgPHBvbHlnb24gcG9pbnRzPSIxMTgwLDI1MCAxMzcwLDI1MCAxMjc1LDE1MCIgZmlsbD0iI2U1MzkzNSIvPgogICAgPHJlY3QgeD0iMTIyMCIgeT0iMjgwIiB3aWR0aD0iMTEwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMDAwIi8+CiAgICA8IS0tIFN0aWx0cyAtLT4KICAgIDxsaW5lIHgxPSIxMjIwIiB5MT0iNTAwIiB4Mj0iMTIyMCIgeTI9IjYwMCIgc3Ryb2tlPSIjNzk1NTQ4IiBzdHJva2Utd2lkdGg9IjgiLz4KICAgIDxsaW5lIHgxPSIxMzMwIiB5MT0iNTAwIiB4Mj0iMTMzMCIgeTI9IjYwMCIgc3Ryb2tlPSIjNzk1NTQ4IiBzdHJva2Utd2lkdGg9IjgiLz4KCiAgICA8IS0tIFVtYnJlbGxhcyAtLT4KICAgIDxwYXRoIGQ9Ik0gMjAwIDU1MCBBIDEwMCA1MCAwIDAgMSA0MDAgNTUwIFoiIGZpbGw9IiNlOTFlNjMiLz4KICAgIDxsaW5lIHgxPSIzMDAiIHkxPSI1NTAiIHgyPSIzMDAiIHkyPSI2NTAiIHN0cm9rZT0iI2JkYzNjNyIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgICAKICAgIDxwYXRoIGQ9Ik0gNzAwIDYwMCBBIDEyMCA2MCAwIDAgMSA5NDAgNjAwIFoiIGZpbGw9IiM5YzI3YjAiLz4KICAgIDxsaW5lIHgxPSI4MjAiIHkxPSI2MDAiIHgyPSI4MjAiIHkyPSI3MjAiIHN0cm9rZT0iI2JkYzNjNyIgc3Ryb2tlLXdpZHRoPSI0Ii8+Cjwvc3ZnPg==",
+    // Spawn Zones for realistic positioning
+        walkableArea: [
+      [0, 500],
+      [1600, 500],
+      [1600, 900],
+      [0, 900],
+    ],
+    numCharacters: 120,
+    baseScale: 1.2,
+    minScale: 0.6,
+  },
+  {
+    name: "Masada",
+    background: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxNjAwIDkwMCIgd2lkdGg9IjE2MDAiIGhlaWdodD0iOTAwIj4KICAgIDwhLS0gU2t5IChTdW5yaXNlL1N1bnNldCkgLS0+CiAgICA8ZGVmcz4KICAgICAgICA8bGluZWFyR3JhZGllbnQgaWQ9InNreUdyYWQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMCUiIHkyPSIxMDAlIj4KICAgICAgICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iI2ZmOWE5ZSIgLz4KICAgICAgICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjZmVjZmVmIiAvPgogICAgICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8L2RlZnM+CiAgICA8cmVjdCB3aWR0aD0iMTYwMCIgaGVpZ2h0PSI5MDAiIGZpbGw9InVybCgjc2t5R3JhZCkiLz4KICAgIAogICAgPCEtLSBTdW4gLS0+CiAgICA8Y2lyY2xlIGN4PSI4MDAiIGN5PSI0MDAiIHI9IjEwMCIgZmlsbD0iI2ZmN2U1ZiIgb3BhY2l0eT0iMC45Ii8+CgogICAgPCEtLSBEaXN0YW50IE1vdW50YWlucyAoTW9hYikgLS0+CiAgICA8cGF0aCBkPSJNIDAgNDUwIEwgMzAwIDM1MCBMIDYwMCA0NTAgTCA5MDAgMzgwIEwgMTIwMCA0NTAgTCAxNjAwIDMyMCBMIDE2MDAgOTAwIEwgMCA5MDAgWiIgZmlsbD0iIzhkNmU2MyIvPgogICAgCiAgICA8IS0tIERlYWQgU2VhIC0tPgogICAgPHJlY3QgeD0iMCIgeT0iNDUwIiB3aWR0aD0iMTYwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiM0ZmMzZjciIG9wYWNpdHk9IjAuNiIvPgoKICAgIDwhLS0gTWFzYWRhIFBsYXRlYXUgKFdhbGthYmxlIEFyZWEpIC0tPgogICAgPHBvbHlnb24gcG9pbnRzPSIwLDU1MCAxNjAwLDU1MCAxNjAwLDkwMCAwLDkwMCIgZmlsbD0iI2Q3Y2NjOCIvPgogICAgPHBhdGggZD0iTSAwIDU1MCBMIDE2MDAgNTUwIEwgMTYwMCA1ODAgTCAwIDU4MCBaIiBmaWxsPSIjYmNhYWE0Ii8+CgogICAgPCEtLSBSdWlucy9TdG9uZXMgLS0+CiAgICA8cmVjdCB4PSIyMDAiIHk9IjYwMCIgd2lkdGg9IjEwMCIgaGVpZ2h0PSI0MCIgZmlsbD0iI2ExODg3ZiIvPgogICAgPHJlY3QgeD0iMjIwIiB5PSI1NjAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI0MCIgZmlsbD0iI2ExODg3ZiIvPgogICAgCiAgICA8cmVjdCB4PSIxMjAwIiB5PSI2NTAiIHdpZHRoPSIxNTAiIGhlaWdodD0iNTAiIGZpbGw9IiNhMTg4N2YiLz4KICAgIDxyZWN0IHg9IjEyNTAiIHk9IjYwMCIgd2lkdGg9IjUwIiBoZWlnaHQ9IjUwIiBmaWxsPSIjYTE4ODdmIi8+CiAgICAKICAgIDwhLS0gRmxhZyBvZiBJc3JhZWwgLS0+CiAgICA8bGluZSB4MT0iODAwIiB5MT0iNTUwIiB4Mj0iODAwIiB5Mj0iNDAwIiBzdHJva2U9IiM3ZjhjOGQiIHN0cm9rZS13aWR0aD0iNCIvPgogICAgPHJlY3QgeD0iODAyIiB5PSI0MDAiIHdpZHRoPSI2MCIgaGVpZ2h0PSI0MCIgZmlsbD0iI2ZmZiIvPgogICAgPGxpbmUgeDE9IjgwMiIgeTE9IjQwNSIgeDI9Ijg2MiIgeTI9IjQwNSIgc3Ryb2tlPSIjMDAzOGI4IiBzdHJva2Utd2lkdGg9IjQiLz4KICAgIDxsaW5lIHgxPSI4MDIiIHkxPSI0MzUiIHgyPSI4NjIiIHkyPSI0MzUiIHN0cm9rZT0iIzAwMzhiOCIgc3Ryb2tlLXdpZHRoPSI0Ii8+CiAgICA8cG9seWdvbiBwb2ludHM9IjgzMiw0MTAgODIyLDQyNSA4NDIsNDI1IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMDM4YjgiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgPHBvbHlnb24gcG9pbnRzPSI4MzIsNDMwIDgyMiw0MTUgODQyLDQxNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMDAzOGI4IiBzdHJva2Utd2lkdGg9IjIiLz4KCjwvc3ZnPg==",
+    // Spawn Zones for realistic positioning
+        walkableArea: [
+      [0, 550],
+      [1600, 550],
+      [1600, 900],
+      [0, 900],
+    ],
+    numCharacters: 150,
+    baseScale: 1.1,
+    minScale: 0.7,
+  },
+];
 
-        // --- PAN & ZOOM MECHANICS ---
-        const container = document.getElementById('game-container');
-        const board = document.getElementById('game-board');
+const characters = [
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE1MCI+CiAgICA8ZyBpZD0ic29sZGllciI+CiAgICAgICAgPCEtLSBCb2R5OiBPbGl2ZSBncmVlbiB1bmlmb3JtIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gMzAgNTUgTCA3MCA1NSBMIDc1IDk1IEwgMjUgOTUgWiIgZmlsbD0iIzU1NmIyZiIvPgogICAgICAgIDwhLS0gUGFudHMgLS0+CiAgICAgICAgPHBhdGggZD0iTSAyNSA5NSBMIDc1IDk1IEwgNzAgMTM1IEwgNTUgMTM1IEwgNTAgMTA1IEwgNDUgMTM1IEwgMzAgMTM1IFoiIGZpbGw9IiM1NTZiMmYiLz4KICAgICAgICA8IS0tIEJlbHQgLS0+CiAgICAgICAgPHJlY3QgeD0iMjUiIHk9IjkzIiB3aWR0aD0iNTAiIGhlaWdodD0iNiIgZmlsbD0iIzFhMWExYSIvPgoKICAgICAgICA8IS0tIEFybXMgLS0+CiAgICAgICAgPHBhdGggZD0iTSAyNSA2NSBMIDE1IDg1IEwgMjAgOTAgTCAzMCA3MCIgZmlsbD0iIzU1NmIyZiIvPgogICAgICAgIDwhLS0gUmlnaHQgYXJtIGhvbGRpbmcgd2VhcG9uIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gNzUgNjUgTCA4NSA4NSBMIDgwIDkwIEwgNzAgNzAiIGZpbGw9IiM1NTZiMmYiLz4KICAgICAgICAKICAgICAgICA8IS0tIEhhbmRzIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjE3IiBjeT0iODgiIHI9IjUiIGZpbGw9IiNlMGFjNjkiLz4KICAgICAgICA8Y2lyY2xlIGN4PSI4MyIgY3k9Ijg4IiByPSI1IiBmaWxsPSIjZTBhYzY5Ii8+CgogICAgICAgIDwhLS0gTTE2IC8gVGF2b3IgKGFic3RyYWN0IHJlcHJlc2VudGF0aW9uKSAtLT4KICAgICAgICA8cmVjdCB4PSI3NSIgeT0iNDAiIHdpZHRoPSI2IiBoZWlnaHQ9IjUwIiBmaWxsPSIjMmMzZTUwIiB0cmFuc2Zvcm09InJvdGF0ZSgxNSA3NSA0MCkiLz4KICAgICAgICA8cmVjdCB4PSI3MyIgeT0iNjUiIHdpZHRoPSIxMiIgaGVpZ2h0PSI0IiBmaWxsPSIjMWExYTFhIiB0cmFuc2Zvcm09InJvdGF0ZSgxNSA3NSA0MCkiLz4KCiAgICAgICAgPCEtLSBIZWFkIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjUwIiBjeT0iMzUiIHI9IjE4IiBmaWxsPSIjZTBhYzY5Ii8+CiAgICAgICAgPCEtLSBCZXJldCAtLT4KICAgICAgICA8cGF0aCBkPSJNIDMwIDI1IFEgNTAgMTUgNzAgMzAgUSA1MCAyNSAzMCAyNSIgZmlsbD0iIzhiMDAwMCIvPiA8IS0tIFJlZCBQYXJhdHJvb3BlciBiZXJldCAtLT4KICAgICAgICA8IS0tIEhhaXIvRmFjZSBkZXRhaWxzIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjQzIiBjeT0iMzUiIHI9IjIiIGZpbGw9IiMwMDAiLz4KICAgICAgICA8Y2lyY2xlIGN4PSI1NyIgY3k9IjM1IiByPSIyIiBmaWxsPSIjMDAwIi8+CiAgICAgICAgCiAgICAgICAgPCEtLSBCb290cyAtLT4KICAgICAgICA8cGF0aCBkPSJNIDI1IDEzNSBMIDQ1IDEzNSBMIDQ1IDE0NSBMIDI1IDE0NSBaIiBmaWxsPSIjOGI0NTEzIiByeD0iMiIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNTUgMTM1IEwgNzUgMTM1IEwgNzUgMTQ1IEwgNTUgMTQ1IFoiIGZpbGw9IiM4YjQ1MTMiIHJ4PSIyIi8+CiAgICA8L2c+Cjwvc3ZnPg==",
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE1MCI+CiAgICA8ZyBpZD0idG91cmlzdCI+CiAgICAgICAgPCEtLSBCb2R5OiBCcmlnaHQgSGF3YWlpYW4gc2hpcnQgLS0+CiAgICAgICAgPHBhdGggZD0iTSAzMCA1NSBMIDcwIDU1IEwgNzUgOTUgTCAyNSA5NSBaIiBmaWxsPSIjZmY2YjZiIi8+CiAgICAgICAgPCEtLSBTaGlydCBwYXR0ZXJuIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjQwIiBjeT0iNzAiIHI9IjUiIGZpbGw9IiNmMWM0MGYiLz4KICAgICAgICA8Y2lyY2xlIGN4PSI2MCIgY3k9IjgwIiByPSI0IiBmaWxsPSIjZjFjNDBmIi8+CiAgICAgICAgPGNpcmNsZSBjeD0iNTAiIGN5PSI2MCIgcj0iNiIgZmlsbD0iI2YxYzQwZiIvPgogICAgICAgIDxjaXJjbGUgY3g9IjM1IiBjeT0iODUiIHI9IjQiIGZpbGw9IiNmMWM0MGYiLz4KCiAgICAgICAgPCEtLSBTaG9ydHMgLS0+CiAgICAgICAgPHBhdGggZD0iTSAyNSA5NSBMIDc1IDk1IEwgNzAgMTIwIEwgNTUgMTIwIEwgNTAgMTAwIEwgNDUgMTIwIEwgMzAgMTIwIFoiIGZpbGw9IiMzNDk4ZGIiLz4KICAgICAgICAKICAgICAgICA8IS0tIExlZ3MgLS0+CiAgICAgICAgPHJlY3QgeD0iMzUiIHk9IjEyMCIgd2lkdGg9IjgiIGhlaWdodD0iMjAiIGZpbGw9IiNmY2RiYjMiLz4KICAgICAgICA8cmVjdCB4PSI1NyIgeT0iMTIwIiB3aWR0aD0iOCIgaGVpZ2h0PSIyMCIgZmlsbD0iI2ZjZGJiMyIvPgoKICAgICAgICA8IS0tIEFybXMgLS0+CiAgICAgICAgPHBhdGggZD0iTSAyNSA2NSBMIDE1IDg1IEwgMjAgOTAgTCAzMCA3MCIgZmlsbD0iI2ZmNmI2YiIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNzUgNjUgTCA4NSA4NSBMIDgwIDkwIEwgNzAgNzAiIGZpbGw9IiNmZjZiNmIiLz4KICAgICAgICA8Y2lyY2xlIGN4PSIxNyIgY3k9Ijg4IiByPSI1IiBmaWxsPSIjZmNkYmIzIi8+CiAgICAgICAgPGNpcmNsZSBjeD0iODMiIGN5PSI4OCIgcj0iNSIgZmlsbD0iI2ZjZGJiMyIvPgoKICAgICAgICA8IS0tIEhlYWQgLS0+CiAgICAgICAgPGNpcmNsZSBjeD0iNTAiIGN5PSIzNSIgcj0iMTgiIGZpbGw9IiNmY2RiYjMiLz4KICAgICAgICA8IS0tIFN1biBoYXQgLS0+CiAgICAgICAgPGVsbGlwc2UgY3g9IjUwIiBjeT0iMjIiIHJ4PSIzMCIgcnk9IjgiIGZpbGw9IiNmMzljMTIiLz4KICAgICAgICA8cGF0aCBkPSJNIDM1IDIyIFEgNTAgNSA2NSAyMiIgZmlsbD0iI2YzOWMxMiIvPgogICAgICAgIAogICAgICAgIDwhLS0gQ2FtZXJhIGFyb3VuZCBuZWNrIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gNDAgNTUgTCA2MCA1NSIgc3Ryb2tlPSIjMzMzIiBzdHJva2Utd2lkdGg9IjEuNSIgZmlsbD0ibm9uZSIvPgogICAgICAgIDxyZWN0IHg9IjQyIiB5PSI2NSIgd2lkdGg9IjE2IiBoZWlnaHQ9IjEwIiByeD0iMiIgZmlsbD0iIzJjM2U1MCIvPgogICAgICAgIDxjaXJjbGUgY3g9IjUwIiBjeT0iNzAiIHI9IjMiIGZpbGw9IiNiZGMzYzciLz4KCiAgICAgICAgPCEtLSBTYW5kYWxzIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gMzAgMTQwIEwgNDUgMTQwIiBzdHJva2U9IiM4ZTQ0YWQiIHN0cm9rZS13aWR0aD0iMyIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNTUgMTQwIEwgNzAgMTQwIiBzdHJva2U9IiM4ZTQ0YWQiIHN0cm9rZS13aWR0aD0iMyIvPgogICAgPC9nPgo8L3N2Zz4=",
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE1MCI+CiAgICA8ZyBpZD0ib3J0aG9kb3giPgogICAgICAgIDwhLS0gQm9keTogQmxhY2sgc3VpdCAtLT4KICAgICAgICA8cGF0aCBkPSJNIDMwIDU1IEwgNzAgNTUgTCA3NSAxMDUgTCAyNSAxMDUgWiIgZmlsbD0iIzFhMWExYSIvPgogICAgICAgIDwhLS0gV2hpdGUgc2hpcnQgdHJpYW5nbGUgLS0+CiAgICAgICAgPHBvbHlnb24gcG9pbnRzPSI0NSw1NSA1NSw1NSA1MCw3NSIgZmlsbD0iI2ZmZmZmZiIvPgogICAgICAgIDwhLS0gUGFudHMgLS0+CiAgICAgICAgPHBhdGggZD0iTSAyNSAxMDUgTCA3NSAxMDUgTCA3MCAxNDAgTCA1NSAxNDAgTCA1MCAxMTUgTCA0NSAxNDAgTCAzMCAxNDAgWiIgZmlsbD0iIzFhMWExYSIvPgogICAgICAgIAogICAgICAgIDwhLS0gQXJtcyAtLT4KICAgICAgICA8cGF0aCBkPSJNIDI1IDY1IEwgMTUgOTAgTCAyMCA5NSBMIDMwIDcwIiBmaWxsPSIjMWExYTFhIi8+CiAgICAgICAgPHBhdGggZD0iTSA3NSA2NSBMIDg1IDkwIEwgODAgOTUgTCA3MCA3MCIgZmlsbD0iIzFhMWExYSIvPgogICAgICAgIAogICAgICAgIDwhLS0gSGFuZHMgaG9sZGluZyBhIGJvb2sgLS0+CiAgICAgICAgPGNpcmNsZSBjeD0iMTciIGN5PSI5MyIgcj0iNSIgZmlsbD0iI2ZjZGJiMyIvPgogICAgICAgIDxjaXJjbGUgY3g9IjgzIiBjeT0iOTMiIHI9IjUiIGZpbGw9IiNmY2RiYjMiLz4KICAgICAgICA8cmVjdCB4PSI0MCIgeT0iODUiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxNSIgZmlsbD0iIzhiNDUxMyIvPgogICAgICAgIDwhLS0gTGVmdCBhcm0gYnJvdWdodCBpbiB0byBob2xkIGJvb2sgLS0+CiAgICAgICAgPHBhdGggZD0iTSAyNSA2NSBRIDEwIDgwIDQwIDkwIiBmaWxsPSJub25lIiBzdHJva2U9IiMxYTFhMWEiIHN0cm9rZS13aWR0aD0iMTAiLz4KCiAgICAgICAgPCEtLSBIZWFkIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjUwIiBjeT0iMzUiIHI9IjE4IiBmaWxsPSIjZmNkYmIzIi8+CiAgICAgICAgCiAgICAgICAgPCEtLSBCZWFyZCAtLT4KICAgICAgICA8cGF0aCBkPSJNIDM1IDQwIFEgNTAgNjUgNjUgNDAgWiIgZmlsbD0iIzMzMzMzMyIvPgogICAgICAgIAogICAgICAgIDwhLS0gUGF5b3QgLS0+CiAgICAgICAgPHBhdGggZD0iTSAzMyAzNSBRIDMwIDQ1IDM1IDU1IiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNjcgMzUgUSA3MCA0NSA2NSA1NSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjIiLz4KCiAgICAgICAgPCEtLSBCbGFjayBIYXQgKEJvcnNhbGlubyBzdHlsZSkgLS0+CiAgICAgICAgPGVsbGlwc2UgY3g9IjUwIiBjeT0iMjIiIHJ4PSIyNSIgcnk9IjUiIGZpbGw9IiMxYTFhMWEiLz4KICAgICAgICA8cGF0aCBkPSJNIDM1IDIyIEwgNDAgNSBMIDYwIDUgTCA2NSAyMiBaIiBmaWxsPSIjMWExYTFhIi8+CiAgICAgICAgCiAgICAgICAgPCEtLSBTaG9lcyAtLT4KICAgICAgICA8ZWxsaXBzZSBjeD0iMzciIGN5PSIxNDIiIHJ4PSI4IiByeT0iNCIgZmlsbD0iIzAwMCIvPgogICAgICAgIDxlbGxpcHNlIGN4PSI2MiIgY3k9IjE0MiIgcng9IjgiIHJ5PSI0IiBmaWxsPSIjMDAwIi8+CiAgICA8L2c+Cjwvc3ZnPg==",
+  "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE1MCI+CiAgICA8ZyBpZD0iYmVhY2hnb2VyIj4KICAgICAgICA8IS0tIEJvZHk6IFRhbmsgdG9wIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gMzUgNTUgTCA2NSA1NSBMIDcwIDk1IEwgMzAgOTUgWiIgZmlsbD0iIzliNTliNiIvPgogICAgICAgIAogICAgICAgIDwhLS0gU3dpbSB0cnVua3MgLS0+CiAgICAgICAgPHBhdGggZD0iTSAzMCA5NSBMIDcwIDk1IEwgNjUgMTE1IEwgNTUgMTE1IEwgNTAgMTA1IEwgNDUgMTE1IEwgMzUgMTE1IFoiIGZpbGw9IiNlNjdlMjIiLz4KICAgICAgICA8Y2lyY2xlIGN4PSI0MCIgY3k9IjEwNSIgcj0iMyIgZmlsbD0iI2ZmZiIvPgogICAgICAgIDxjaXJjbGUgY3g9IjYwIiBjeT0iMTA1IiByPSIzIiBmaWxsPSIjZmZmIi8+CgogICAgICAgIDwhLS0gTGVncyAoYmFyZSkgLS0+CiAgICAgICAgPHJlY3QgeD0iMzciIHk9IjExNSIgd2lkdGg9IjgiIGhlaWdodD0iMjUiIGZpbGw9IiNmNWNiYTciLz4KICAgICAgICA8cmVjdCB4PSI1NSIgeT0iMTE1IiB3aWR0aD0iOCIgaGVpZ2h0PSIyNSIgZmlsbD0iI2Y1Y2JhNyIvPgoKICAgICAgICA8IS0tIEFybXMgLS0+CiAgICAgICAgPHBhdGggZD0iTSAzMCA2NSBMIDIwIDg1IEwgMjUgOTAgTCAzNSA3MCIgZmlsbD0iI2Y1Y2JhNyIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNzAgNjUgTCA4MCA4NSBMIDc1IDkwIEwgNjUgNzAiIGZpbGw9IiNmNWNiYTciLz4KICAgICAgICAKICAgICAgICA8IS0tIEhhbmRzIGhvbGRpbmcgYW4gaWNlIGNyZWFtIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjIyIiBjeT0iODgiIHI9IjUiIGZpbGw9IiNmNWNiYTciLz4KICAgICAgICA8cGF0aCBkPSJNIDE4IDc4IEwgMjYgNzggTCAyMiA5MCBaIiBmaWxsPSIjZjM5YzEyIi8+IDwhLS0gQ29uZSAtLT4KICAgICAgICA8Y2lyY2xlIGN4PSIyMiIgY3k9Ijc1IiByPSI0IiBmaWxsPSIjZWNmMGYxIi8+IDwhLS0gSWNlIGNyZWFtIC0tPgogICAgICAgIDxjaXJjbGUgY3g9Ijc4IiBjeT0iODgiIHI9IjUiIGZpbGw9IiNmNWNiYTciLz4KCiAgICAgICAgPCEtLSBIZWFkIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjUwIiBjeT0iMzUiIHI9IjE4IiBmaWxsPSIjZjVjYmE3Ii8+CiAgICAgICAgCiAgICAgICAgPCEtLSBTdW5nbGFzc2VzIC0tPgogICAgICAgIDxyZWN0IHg9IjM2IiB5PSIzMCIgd2lkdGg9IjEyIiBoZWlnaHQ9IjgiIHJ4PSIyIiBmaWxsPSIjMmMzZTUwIi8+CiAgICAgICAgPHJlY3QgeD0iNTIiIHk9IjMwIiB3aWR0aD0iMTIiIGhlaWdodD0iOCIgcng9IjIiIGZpbGw9IiMyYzNlNTAiLz4KICAgICAgICA8cGF0aCBkPSJNIDQ4IDM0IEwgNTIgMzQiIHN0cm9rZT0iIzJjM2U1MCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgICAgICAgCiAgICAgICAgPCEtLSBIYWlyIChzcGlreSkgLS0+CiAgICAgICAgPHBhdGggZD0iTSAzNSAyNSBMIDQwIDE1IEwgNDUgMjIgTCA1MCAxMCBMIDU1IDIyIEwgNjAgMTUgTCA2NSAyNSIgZmlsbD0iI2U3NGMzYyIvPgoKICAgICAgICA8IS0tIEZsaXAgZmxvcHMgLS0+CiAgICAgICAgPGVsbGlwc2UgY3g9IjQxIiBjeT0iMTQyIiByeD0iNiIgcnk9IjIiIGZpbGw9IiMzNDk4ZGIiLz4KICAgICAgICA8ZWxsaXBzZSBjeD0iNTkiIGN5PSIxNDIiIHJ4PSI2IiByeT0iMiIgZmlsbD0iIzM0OThkYiIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNDEgMTQyIEwgMzggMTM4IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNTkgMTQyIEwgNjIgMTM4IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgPC9nPgo8L3N2Zz4=",
+];
+const TARGET_CHAR = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTUwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjE1MCI+CiAgICA8ZyBpZD0iYmVuLWd1cmlvbiI+CiAgICAgICAgPCEtLSBCb2R5IC8gS2hha2kgc2hpcnQgJiBwYW50cyAtLT4KICAgICAgICA8cGF0aCBkPSJNIDMwIDYwIEwgNzAgNjAgTCA4MCAxMDAgTCA3MCAxNDAgTCA1NSAxNDAgTCA1MCAxMDAgTCA0NSAxNDAgTCAzMCAxNDAgTCAyMCAxMDAgWiIgZmlsbD0iI2IwYTY3YyIgc3Ryb2tlPSIjOGE4MDVjIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgICAgICA8IS0tIEJlbHQgLS0+CiAgICAgICAgPHJlY3QgeD0iMjUiIHk9Ijk1IiB3aWR0aD0iNTAiIGhlaWdodD0iOCIgZmlsbD0iIzVjNDAzMyIvPgogICAgICAgIDxyZWN0IHg9IjQyIiB5PSI5MyIgd2lkdGg9IjE2IiBoZWlnaHQ9IjEyIiBmaWxsPSJnb2xkIi8+CiAgICAgICAgCiAgICAgICAgPCEtLSBBcm1zIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gMjUgNjUgTCAxMCA5MCBMIDE1IDEwMCBMIDMwIDc1IiBmaWxsPSIjYjBhNjdjIi8+CiAgICAgICAgPHBhdGggZD0iTSA3NSA2NSBMIDkwIDkwIEwgODUgMTAwIEwgNzAgNzUiIGZpbGw9IiNiMGE2N2MiLz4KICAgICAgICAKICAgICAgICA8IS0tIEhhbmRzIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjEyIiBjeT0iOTUiIHI9IjYiIGZpbGw9IiNmY2RiYjMiLz4KICAgICAgICA8Y2lyY2xlIGN4PSI4OCIgY3k9Ijk1IiByPSI2IiBmaWxsPSIjZmNkYmIzIi8+CgogICAgICAgIDwhLS0gSGVhZCAtLT4KICAgICAgICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjQwIiByPSIyMCIgZmlsbD0iI2ZjZGJiMyIvPgogICAgICAgIDwhLS0gRmFjZSBkZXRhaWxzIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gNDIgMzUgUSA0NiAzMCA1MCAzNSIgc3Ryb2tlPSIjMDAwIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjEuNSIvPiA8IS0tIEdsYXNzZXMgYnJpZGdlPyAtLT4KICAgICAgICA8Y2lyY2xlIGN4PSI0MiIgY3k9IjM4IiByPSI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMzMzMiIHN0cm9rZS13aWR0aD0iMS41Ii8+IDwhLS0gTGVmdCBMZW5zIC0tPgogICAgICAgIDxjaXJjbGUgY3g9IjU4IiBjeT0iMzgiIHI9IjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzMzMyIgc3Ryb2tlLXdpZHRoPSIxLjUiLz4gPCEtLSBSaWdodCBMZW5zIC0tPgogICAgICAgIAogICAgICAgIDxwYXRoIGQ9Ik0gNDUgNDggUSA1MCA1MiA1NSA0OCIgc3Ryb2tlPSIjMDAwIiBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjEuNSIvPiA8IS0tIFNtaWxlIC0tPgogICAgICAgIAogICAgICAgIDwhLS0gSWNvbmljIFdoaXRlIEhhaXIgVHVmdHMgLS0+CiAgICAgICAgPCEtLSBMZWZ0IHR1ZnQgLS0+CiAgICAgICAgPHBhdGggZD0iTSAzMCA0MCBRIDE1IDMwIDIwIDIwIFEgMjUgMjUgMzUgMzAiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2VlZSIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgICAgICAgPHBhdGggZD0iTSAzMiAzNSBRIDE1IDI1IDEwIDM1IFEgMjAgNDAgMzAgNDUiIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2VlZSIgc3Ryb2tlLXdpZHRoPSIxIi8+CiAgICAgICAgCiAgICAgICAgPCEtLSBSaWdodCB0dWZ0IC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gNzAgNDAgUSA4NSAzMCA4MCAyMCBRIDc1IDI1IDY1IDMwIiBmaWxsPSIjZmZmIiBzdHJva2U9IiNlZWUiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgICAgIDxwYXRoIGQ9Ik0gNjggMzUgUSA4NSAyNSA5MCAzNSBRIDgwIDQwIDcwIDQ1IiBmaWxsPSIjZmZmIiBzdHJva2U9IiNlZWUiIHN0cm9rZS13aWR0aD0iMSIvPgoKICAgICAgICA8IS0tIEJhbGRpbmcgdG9wIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gMzUgMzAgUSA1MCAxNSA2NSAzMCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmNkYmIzIiBzdHJva2Utd2lkdGg9IjIiLz4KICAgICAgICAKICAgICAgICA8IS0tIFNob2VzIC0tPgogICAgICAgIDxwYXRoIGQ9Ik0gMjUgMTQwIFEgMzAgMTUwIDQwIDE0NSBaIiBmaWxsPSIjMzMzIi8+CiAgICAgICAgPHBhdGggZD0iTSA3NSAxNDAgUSA3MCAxNTAgNjAgMTQ1IFoiIGZpbGw9IiMzMzMiLz4KICAgIDwvZz4KPC9zdmc+";
 
-        let scale = 1;
-        let translateX = 0;
-        let translateY = 0;
-        let isDragging = false;
-        let startX, startY;
+let currentLevelIdx = 0;
+let timeElapsed = 0;
+let timerInterval;
 
-        // Center the board initially
-        const centerBoard = () => {
-            const containerRect = container.getBoundingClientRect();
-            translateX = (containerRect.width - board.offsetWidth * scale) / 2;
-            translateY = (containerRect.height - board.offsetHeight * scale) / 2;
-            updateTransform();
-        };
+// Elements
+const gameContainer = document.getElementById("game-container");
+const gameWorld = document.getElementById("game-world");
+const currentLevelNameEl = document.getElementById("current-level-name");
+const timerEl = document.getElementById("timer");
 
-        function updateTransform() {
-            board.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-        }
+// Panning and Zooming State
+let scale = 1;
+let translateX = 0;
+let translateY = 0;
+let isDragging = false;
+let startX, startY;
 
-        // Initialize position
-        // Zoom out slightly to show more of the market
-        scale = 0.6;
-        centerBoard();
+function init() {
+  setupControls();
+  loadLevel(currentLevelIdx);
+}
 
-        // Panning
-        container.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.character')) return; // Don't pan if clicking a character
-            isDragging = true;
-            startX = e.clientX - translateX;
-            startY = e.clientY - translateY;
-        });
+function startTimer() {
+  clearInterval(timerInterval);
+  timeElapsed = 0;
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    timeElapsed++;
+    updateTimerDisplay();
+  }, 1000);
+}
 
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            translateX = e.clientX - startX;
-            translateY = e.clientY - startY;
-            updateTransform();
-        });
+function updateTimerDisplay() {
+  const minutes = Math.floor(timeElapsed / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (timeElapsed % 60).toString().padStart(2, "0");
+  timerEl.textContent = `${minutes}:${seconds}`;
+}
 
-        window.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
+function loadLevel(idx) {
+  const level = levels[idx];
+  currentLevelNameEl.textContent = level.name;
 
-        // Zooming
-        container.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            const zoomAmount = 0.1;
-            const oldScale = scale;
-            if (e.deltaY < 0) {
-                scale += zoomAmount; // Zoom in
-            } else {
-                scale -= zoomAmount; // Zoom out
-            }
-            scale = Math.max(0.4, Math.min(scale, 3)); // Clamp scale
+  // Reset World
+  gameWorld.innerHTML = "";
 
-            // Adjust translation to zoom towards cursor
-            const rect = container.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+  // Set Background
+  const bgImg = document.createElement("img");
+  bgImg.src = level.background;
+  bgImg.style.width = "1600px";
+  bgImg.style.height = "900px";
+  bgImg.style.position = "absolute";
+  bgImg.style.top = "0";
+  bgImg.style.left = "0";
+  bgImg.style.pointerEvents = "none";
+  gameWorld.appendChild(bgImg);
 
-            translateX = mouseX - (mouseX - translateX) * (scale / oldScale);
-            translateY = mouseY - (mouseY - translateY) * (scale / oldScale);
+  // Set Game World size based on bg
+  gameWorld.style.width = "1600px";
+  gameWorld.style.height = "900px";
 
-            updateTransform();
-        }, { passive: false });
+  // Reset view
+  scale = getFitScale();
+  centerView();
+  updateTransform();
 
+  spawnCharacters(level);
+  startTimer();
+}
 
-        // --- CHARACTER GENERATION ---
+function getFitScale() {
+  const containerRatio = gameContainer.clientWidth / gameContainer.clientHeight;
+  const worldRatio = 1600 / 900;
+  if (containerRatio > worldRatio) {
+    return gameContainer.clientHeight / 900;
+  } else {
+    return gameContainer.clientWidth / 1600;
+  }
+}
 
-        const containerDiv = document.getElementById('characters-container');
+function centerView() {
+  translateX = (gameContainer.clientWidth - 1600 * scale) / 2;
+  translateY = (gameContainer.clientHeight - 900 * scale) / 2;
+}
 
-        // Spawn Zones Configuration for Mahane Yehuda
-        // The image is 2500x1667.
-        // The market path forms a rough triangle / trapezoid from the middle towards the bottom.
-        // We'll define a walkable zone in the bottom 45% of the screen.
-        const spawnZone = {
-            minX: 200,
-            maxX: 2300,
-            minY: 900,  // Further back in the market
-            maxY: 1600  // Closer to the camera
-        };
+// Ray-casting algorithm for point in polygon
+function isPointInPolygon(point, vs) {
+  let x = point[0],
+    y = point[1];
+  let inside = false;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    let xi = vs[i][0],
+      yi = vs[i][1];
+    let xj = vs[j][0],
+      yj = vs[j][1];
+    let intersect =
+      yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
 
-        const characters = [];
-        const numCharacters = 250; // Dense crowd
+// Generate random point within the bounding box, then check if in polygon
+function getRandomPointInArea(area) {
+  let minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  area.forEach((p) => {
+    if (p[0] < minX) minX = p[0];
+    if (p[0] > maxX) maxX = p[0];
+    if (p[1] < minY) minY = p[1];
+    if (p[1] > maxY) maxY = p[1];
+  });
 
-        // Generate characters with overlap prevention and depth scaling
-        for (let i = 0; i < numCharacters; i++) {
-            let validPosition = false;
-            let x, y, scaleRatio;
-            let attempts = 0;
+  while (true) {
+    const x = minX + Math.random() * (maxX - minX);
+    const y = minY + Math.random() * (maxY - minY);
+    if (isPointInPolygon([x, y], area)) {
+      return { x, y, minY, maxY };
+    }
+  }
+}
 
-            // Try to find a non-overlapping spot
-            while (!validPosition && attempts < 150) {
-                x = spawnZone.minX + Math.random() * (spawnZone.maxX - spawnZone.minX);
-                y = spawnZone.minY + Math.random() * (spawnZone.maxY - spawnZone.minY);
+function checkOverlap(x, y, existingChars, minDistance) {
+  for (let char of existingChars) {
+    const dx = char.x - x;
+    const dy = char.y - y;
+    if (Math.sqrt(dx * dx + dy * dy) < minDistance) {
+      return true;
+    }
+  }
+  return false;
+}
 
-                // For the market perspective, the aisle narrows towards the center.
-                // Let's create a rough trapezoid boundary to keep people mostly in the central path
-                // At minY (900), X should be between 900 and 1600.
-                // At maxY (1600), X should be between 200 and 2300.
-                const depthRatio = (y - spawnZone.minY) / (spawnZone.maxY - spawnZone.minY); // 0 to 1
+function spawnCharacters(level) {
+  const existingPositions = [];
 
-                const leftBound = 900 - (700 * depthRatio);
-                const rightBound = 1600 + (700 * depthRatio);
+  // Spawn Target First to ensure he gets placed
+  spawnSingleCharacter(TARGET_CHAR, level, existingPositions, true);
 
-                if (x < leftBound || x > rightBound) {
-                    attempts++;
-                    continue; // Out of bounds of the market path
-                }
+  // Spawn Crowd
+  for (let i = 0; i < level.numCharacters; i++) {
+    const charSrc = characters[Math.floor(Math.random() * characters.length)];
+    spawnSingleCharacter(charSrc, level, existingPositions, false);
+  }
 
-                // Check distance to all other characters to prevent messy overlaps
-                validPosition = true;
-                for (const char of characters) {
-                    const dx = char.x - x;
-                    const dy = char.y - y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+  // Sort DOM elements by Y coordinate to handle overlap layering correctly
+  const els = Array.from(gameWorld.getElementsByClassName("character"));
+  els.sort((a, b) => parseFloat(a.style.top) - parseFloat(b.style.top));
+  els.forEach((el) => gameWorld.appendChild(el)); // re-append in order
+}
 
-                    // Prevent them from being exactly on top of each other
-                    if (dist < 40) {
-                        validPosition = false;
-                        break;
-                    }
-                }
-                attempts++;
-            }
+function spawnSingleCharacter(src, level, existingPositions, isTarget) {
+  let pos;
+  let attempts = 0;
+  const maxAttempts = 100;
 
-            // Layering / Perspective:
-            // Further up the screen (smaller Y) means smaller scale.
-            // Y goes from 900 to 1600.
-            const depth = (y - spawnZone.minY) / (spawnZone.maxY - spawnZone.minY); // 0 to 1
-            scaleRatio = 0.3 + depth * 1.2; // Scales from 0.3 (far) to 1.5 (close)
+  // Character native size
+  const charWidth = 100;
+  const charHeight = 150;
 
-            // Randomly select a portrait ID for Pravatar (1 to 70)
-            const randomAvatarId = Math.floor(Math.random() * 70) + 1;
+  while (attempts < maxAttempts) {
+    pos = getRandomPointInArea(level.walkableArea);
 
-            characters.push({
-                id: `char-${i}`,
-                isTarget: i === 0, // 0 is Ben-Gurion
-                avatarId: randomAvatarId,
-                x: x,
-                y: y,
-                scale: scaleRatio,
-                zIndex: Math.floor(y) // Higher Y (closer) = higher z-index
-            });
-        }
+    // Calculate perspective scale based on Y position within the walkable area bounds
+    // Y = minY -> minScale (furthest away)
+    // Y = maxY -> baseScale (closest)
+    const depthRatio = (pos.y - pos.minY) / (pos.maxY - pos.minY);
+    const currentScale =
+      level.minScale + depthRatio * (level.baseScale - level.minScale);
 
-        // Sort characters by Y (z-index) so DOM paints them back-to-front
-        characters.sort((a, b) => a.y - b.y);
+    // Adaptive overlap distance based on scale
+    const overlapDistance = charWidth * currentScale * 0.6;
 
-        // Render characters
-        characters.forEach(char => {
-            const el = document.createElement('div');
-            el.className = 'character';
+    if (!checkOverlap(pos.x, pos.y, existingPositions, overlapDistance)) {
+      pos.scale = currentScale;
+      existingPositions.push(pos);
+      break;
+    }
+    attempts++;
+  }
 
-            if (char.isTarget) {
-                el.classList.add('ben-gurion');
-            } else {
-                // Using pravatar for generic diverse crowd faces
-                el.style.backgroundImage = `url('https://i.pravatar.cc/100?img=${char.avatarId}')`;
-            }
+  if (attempts >= maxAttempts && !isTarget) {
+    return; // Skip if we can't find a spot for a normal crowd member
+  }
 
-            // Base size for character cutouts is 80x80
-            const size = 80;
-            el.style.width = `${size}px`;
-            el.style.height = `${size}px`;
+  const charEl = document.createElement("img");
+  charEl.src = src;
+  charEl.className = "character";
+  charEl.style.left = `${pos.x}px`;
+  charEl.style.top = `${pos.y}px`;
 
-            el.style.left = `${char.x - (size/2)}px`; // Center horizontally
-            el.style.top = `${char.y - (size/2)}px`; // Center vertically
+  // Apply scaling but keep transform-origin at bottom center (handled in CSS translate)
+  // We append the scale to the translate to combine transforms
+  charEl.style.transform = `translate(-50%, -100%) scale(${pos.scale})`;
 
-            el.style.transform = `scale(${char.scale})`;
-            el.style.zIndex = char.zIndex;
+  // Add specific width/height to avoid loading layout shifts
+  charEl.style.width = `${charWidth}px`;
+  charEl.style.height = `${charHeight}px`;
 
-            // Flip randomly for variety (only generic characters)
-            if (!char.isTarget && Math.random() > 0.5) {
-                el.style.transform = `scale(${char.scale}) scaleX(-1)`;
-            }
+  if (isTarget) {
+    charEl.onclick = handleWin;
+    // Make it slightly harder by ensuring z-index isn't just randomly on top if overlapping
+  } else {
+    // Distraction click
+    charEl.onclick = () => {
+      charEl.style.filter = "brightness(0.5)";
+      setTimeout(() => (charEl.style.filter = ""), 200);
+    };
+  }
 
-            if (char.isTarget) {
-                el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    if (isFound) return;
-                    isFound = true;
-                    clearInterval(timerInterval);
-                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-                    const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
-                    const seconds = String(elapsed % 60).padStart(2, '0');
-                    document.getElementById('final-time').textContent = `${minutes}:${seconds}`;
-                    document.getElementById('win-modal').style.display = 'flex';
-                });
+  gameWorld.appendChild(charEl);
+}
 
-            } else {
-                el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    // Clicked wrong person, maybe visual feedback?
-                    el.style.border = "3px solid red";
-                    setTimeout(() => {
-                        el.style.border = "3px solid white";
-                    }, 300);
-                });
-            }
+function handleWin() {
+  clearInterval(timerInterval);
 
-            containerDiv.appendChild(el);
-        });
+  const minutes = Math.floor(timeElapsed / 60)
+    .toString()
+    .padStart(2, "0");
+  const seconds = (timeElapsed % 60).toString().padStart(2, "0");
+  document.getElementById("final-time").textContent = `${minutes}:${seconds}`;
 
-    </script>
+  document.getElementById("modal-overlay").classList.remove("hidden");
+
+  if (currentLevelIdx < levels.length - 1) {
+    document.getElementById("win-modal").classList.remove("hidden");
+    document.getElementById("game-over-modal").classList.add("hidden");
+  } else {
+    document.getElementById("win-modal").classList.add("hidden");
+    document.getElementById("game-over-modal").classList.remove("hidden");
+  }
+}
+
+// Controls
+function setupControls() {
+  gameContainer.addEventListener("mousedown", (e) => {
+    isDragging = true;
+    startX = e.clientX - translateX;
+    startY = e.clientY - translateY;
+  });
+
+  window.addEventListener("mouseup", () => {
+    isDragging = false;
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!isDragging) return;
+    translateX = e.clientX - startX;
+    translateY = e.clientY - startY;
+    updateTransform();
+  });
+
+  gameContainer.addEventListener(
+    "wheel",
+    (e) => {
+      e.preventDefault();
+
+      const zoomIntensity = 0.1;
+      const delta = e.deltaY > 0 ? -zoomIntensity : zoomIntensity;
+
+      const newScale = Math.min(Math.max(0.5, scale + delta), 4);
+
+      // Zoom relative to mouse position
+      const rect = gameContainer.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Calculate point in world coordinates
+      const worldX = (mouseX - translateX) / scale;
+      const worldY = (mouseY - translateY) / scale;
+
+      scale = newScale;
+
+      // Recalculate translate so the point under the mouse stays the same
+      translateX = mouseX - worldX * scale;
+      translateY = mouseY - worldY * scale;
+
+      updateTransform();
+    },
+    { passive: false },
+  );
+
+  document.getElementById("next-level-btn").addEventListener("click", () => {
+    document.getElementById("modal-overlay").classList.add("hidden");
+    currentLevelIdx++;
+    loadLevel(currentLevelIdx);
+  });
+
+  document.getElementById("restart-btn").addEventListener("click", () => {
+    document.getElementById("modal-overlay").classList.add("hidden");
+    currentLevelIdx = 0;
+    loadLevel(currentLevelIdx);
+  });
+}
+
+function updateTransform() {
+  // Optional: clamp bounds so you can't pan too far outside the map
+  // but leaving it freeform is also fine for now.
+  gameWorld.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+}
+
+// Start
+init();
+
+</script>
 </body>
 </html>
