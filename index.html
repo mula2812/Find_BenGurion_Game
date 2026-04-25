@@ -1,16 +1,59 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>מצא את בן גוריון</title>
+    <title>Find Ben-Gurion</title>
     <style>
-        body {
+        body, html {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            font-family: Arial, sans-serif;
-            direction: rtl;
+            background-color: #111;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            border: 2px solid #ccc;
+        }
+
+        h1 {
+            margin: 0 0 5px 0;
+            font-size: 24px;
+            color: #0038b8; /* Israeli blue */
+        }
+
+        p {
+            margin: 0;
+            font-size: 14px;
+            color: #333;
+        }
+
+        #timer {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            font-family: monospace;
         }
 
         #game-container {
@@ -25,274 +68,203 @@
         }
 
         #game-board {
+            width: 2500px;
+            height: 1667px;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/5/5b/Mahane_Yehuda_%28I%29_%2845298221191%29.jpg');
+            background-size: cover;
+            background-position: center;
             position: absolute;
-            top: 0;
-            left: 0;
-            transform-origin: top left;
-            width: 5000px;
-            height: 4000px;
-            background: linear-gradient(to bottom, 
-                #87CEEB 0%, #87CEEB 15%,
-                #E8F4F8 15%, #E8F4F8 25%,
-                #D4AF37 25%, #D4AF37 35%,
-                #8B7355 35%, #8B7355 50%,
-                #4A90E2 50%, #4A90E2 100%);
-        }
-
-        .landmark-bg {
-            position: absolute;
-            opacity: 0.15;
-            pointer-events: none;
-        }
-
-        .landmark-sign {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            border: 2px solid #333;
-            font-weight: bold;
-            pointer-events: none;
+            transform-origin: 0 0;
+            /* Prevent image dragging */
+            user-select: none;
+            -webkit-user-drag: none;
         }
 
         .character {
             position: absolute;
-            transform-origin: bottom center;
             cursor: pointer;
             transition: transform 0.2s;
+            /* Masking Strategy: Circular cutouts like a photo collage to cleanly fit rectangular photos */
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+            border: 3px solid white;
+            background-size: cover;
+            background-position: top center;
+            background-color: #eee;
         }
 
         .character:hover {
             filter: brightness(1.2);
-            transform: scale(1.1);
         }
 
+        /* Specific style for Ben Gurion to ensure the face is centered */
         .ben-gurion {
-            border: 2px dashed transparent;
-        }
-
-        #ui-layer {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            pointer-events: none;
-            padding: 20px;
-            box-sizing: border-box;
-            display: flex;
-            justify-content: space-between;
-            z-index: 1000;
-        }
-
-        .panel {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 25px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-            pointer-events: auto;
-            border: 2px solid #333;
-        }
-
-        #timer {
-            font-size: 28px;
-            font-weight: bold;
-            color: #E74C3C;
-        }
-
-        #instructions {
-            font-size: 18px;
-            color: #2C3E50;
-            font-weight: bold;
+            background-image: url('https://upload.wikimedia.org/wikipedia/commons/e/e8/David_Ben-Gurion_%28D597-087%29.jpg');
+            background-position: center 20%;
         }
 
         #win-modal {
-            display: none;
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
-            width: 100vw;
-            height: 100vh;
+            width: 100%;
+            height: 100%;
             background: rgba(0, 0, 0, 0.8);
             z-index: 2000;
+            display: none;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 50px;
-            border-radius: 15px;
+            color: white;
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            border: 4px solid #FFD700;
         }
 
-        .modal-content h1 {
-            margin: 0;
-            color: #FFD700;
+        #win-modal h2 {
             font-size: 48px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            color: #FFD700;
+            margin-bottom: 10px;
         }
 
-        .modal-content p {
+        #win-modal p {
             font-size: 24px;
             color: white;
-            margin: 15px 0;
+            margin-bottom: 30px;
         }
 
         button {
-            margin-top: 25px;
-            padding: 15px 40px;
-            font-size: 20px;
-            background-color: #FFD700;
-            color: #333;
-            border: none;
-            border-radius: 8px;
+            padding: 15px 30px;
+            font-size: 18px;
             cursor: pointer;
+            background: #0038b8;
+            color: white;
+            border: none;
+            border-radius: 5px;
             font-weight: bold;
-            transition: all 0.3s;
         }
 
         button:hover {
-            background-color: #FFA500;
-            transform: scale(1.05);
+            background: #002888;
         }
 
-        .hint-panel {
-            position: fixed;
+        /* Instructions */
+        .instructions {
+            position: absolute;
             bottom: 20px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 15px 20px;
-            border-radius: 8px;
-            border: 2px solid #667eea;
-            pointer-events: auto;
-            cursor: pointer;
-            font-weight: bold;
-            color: #667eea;
-            z-index: 999;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 1000;
+            font-size: 14px;
         }
 
-        .hint-panel:hover {
-            background: rgba(102, 126, 234, 0.1);
-        }
     </style>
 </head>
 <body>
 
     <div id="ui-layer">
-        <div class="panel" id="instructions">
-            🔍 מצא את בן גוריון במדי החאקי! (גרור לתיקייה)
+        <div class="panel">
+            <h1>Find Ben-Gurion!</h1>
+            <p>He's hiding in Mahane Yehuda Market.</p>
         </div>
-        <div class="panel" id="timer">
-            ⏱️ 00:00
+        <div class="panel">
+            <div id="timer">00:00</div>
         </div>
+    </div>
+
+    <div class="instructions">
+        Scroll to Zoom | Click & Drag to Pan
     </div>
 
     <div id="game-container">
         <div id="game-board">
-            <!-- Landmark backgrounds and signs -->
+            <div id="characters-container"></div>
         </div>
-    </div>
-
-    <div class="hint-panel" id="hint-panel" onclick="showHint()">
-        💡 קבל רמז
     </div>
 
     <div id="win-modal">
-        <div class="modal-content">
-            <h1>🎉 מצאת את בן גוריון!</h1>
-            <p>זמן: <span id="final-time">00:00</span></p>
-            <p>מצוין! אתה אמיתי חוקר!</p>
-            <button onclick="location.reload()">שחק שוב</button>
-        </div>
+        <h2>Kol Hakavod!</h2>
+        <p>You found Ben-Gurion in <span id="final-time"></span>!</p>
+        <button onclick="location.reload()">Play Again</button>
     </div>
 
     <script>
-        // ========== GAME STATE ==========
+        // --- TIMER ---
         let startTime = Date.now();
         let timerInterval;
         let isFound = false;
-        let hints_used = 0;
 
-        // ========== TIMER LOGIC ==========
-        const timerElement = document.getElementById('timer');
         function updateTimer() {
             if (isFound) return;
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
             const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
             const seconds = String(elapsed % 60).padStart(2, '0');
-            timerElement.textContent = `⏱️ ${minutes}:${seconds}`;
+            document.getElementById('timer').textContent = `${minutes}:${seconds}`;
         }
         timerInterval = setInterval(updateTimer, 1000);
 
-        // ========== PANNING AND ZOOMING ==========
+        // --- PAN & ZOOM MECHANICS ---
         const container = document.getElementById('game-container');
         const board = document.getElementById('game-board');
 
-        let isDragging = false;
-        let startX, startY;
+        let scale = 1;
         let translateX = 0;
         let translateY = 0;
-        let scale = 1;
+        let isDragging = false;
+        let startX, startY;
 
-        const boardWidth = 5000;
-        const boardHeight = 4000;
+        // Center the board initially
+        const centerBoard = () => {
+            const containerRect = container.getBoundingClientRect();
+            translateX = (containerRect.width - board.offsetWidth * scale) / 2;
+            translateY = (containerRect.height - board.offsetHeight * scale) / 2;
+            updateTransform();
+        };
 
         function updateTransform() {
-            const minX = container.clientWidth - boardWidth * scale;
-            const minY = container.clientHeight - boardHeight * scale;
-
-            if (translateX > 0) translateX = 0;
-            if (translateY > 0) translateY = 0;
-            if (translateX < minX) translateX = minX;
-            if (translateY < minY) translateY = minY;
-
-            if (boardWidth * scale < container.clientWidth) {
-                translateX = (container.clientWidth - boardWidth * scale) / 2;
-            }
-            if (boardHeight * scale < container.clientHeight) {
-                translateY = (container.clientHeight - boardHeight * scale) / 2;
-            }
-
             board.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
         }
 
-        translateX = (container.clientWidth - boardWidth) / 2;
-        translateY = (container.clientHeight - boardHeight) / 2;
-        updateTransform();
+        // Initialize position
+        // Zoom out slightly to show more of the market
+        scale = 0.6;
+        centerBoard();
 
+        // Panning
         container.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.character')) return; // Don't pan if clicking a character
             isDragging = true;
             startX = e.clientX - translateX;
             startY = e.clientY - translateY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
         });
 
         window.addEventListener('mouseup', () => {
             isDragging = false;
         });
 
-        window.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-            translateX = e.clientX - startX;
-            translateY = e.clientY - startY;
-            updateTransform();
-        });
-
+        // Zooming
         container.addEventListener('wheel', (e) => {
             e.preventDefault();
             const zoomAmount = 0.1;
             const oldScale = scale;
             if (e.deltaY < 0) {
-                scale += zoomAmount;
+                scale += zoomAmount; // Zoom in
             } else {
-                scale -= zoomAmount;
+                scale -= zoomAmount; // Zoom out
             }
-            scale = Math.max(0.5, Math.min(scale, 3));
+            scale = Math.max(0.4, Math.min(scale, 3)); // Clamp scale
 
+            // Adjust translation to zoom towards cursor
             const rect = container.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
@@ -301,167 +273,61 @@
             translateY = mouseY - (mouseY - translateY) * (scale / oldScale);
 
             updateTransform();
-        });
+        }, { passive: false });
 
-        // ========== CHARACTER GENERATION ==========
 
-        const benGurionSVG = `<svg viewBox="0 0 100 150" width="55" height="85">
-            <!-- Head -->
-            <circle cx="50" cy="35" r="22" fill="#D4A574"/>
-            <!-- Iconic white hair - two tufts -->
-            <path d="M 25 28 Q 20 8 40 12 Q 35 22 30 28 Z" fill="white" stroke="#999" stroke-width="1"/>
-            <path d="M 75 28 Q 80 8 60 12 Q 65 22 70 28 Z" fill="white" stroke="#999" stroke-width="1"/>
-            <!-- Eyes -->
-            <circle cx="45" cy="32" r="2" fill="#333"/>
-            <circle cx="55" cy="32" r="2" fill="#333"/>
-            <!-- Mouth -->
-            <path d="M 45 42 Q 50 45 55 42" stroke="#333" stroke-width="1.5" fill="none"/>
-            <!-- Khaki military uniform jacket -->
-            <rect x="32" y="58" width="36" height="50" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
-            <!-- Buttons -->
-            <circle cx="50" cy="65" r="2" fill="#666"/>
-            <circle cx="50" cy="75" r="2" fill="#666"/>
-            <circle cx="50" cy="85" r="2" fill="#666"/>
-            <!-- Collar -->
-            <path d="M 40 58 L 35 70 L 50 65 Z" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
-            <path d="M 60 58 L 65 70 L 50 65 Z" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
-            <!-- Sleeves -->
-            <rect x="32" y="60" width="6" height="35" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
-            <rect x="62" y="60" width="6" height="35" fill="#A89968" stroke="#8B7355" stroke-width="1"/>
-            <!-- Pants -->
-            <path d="M 40 108 L 38 150 L 45 150 L 47 108 Z" fill="#8B7355" stroke="#666" stroke-width="1"/>
-            <path d="M 60 108 L 62 150 L 55 150 L 53 108 Z" fill="#8B7355" stroke="#666" stroke-width="1"/>
-            <!-- Shoes -->
-            <ellipse cx="41" cy="150" rx="4" ry="2" fill="#333"/>
-            <ellipse cx="59" cy="150" rx="4" ry="2" fill="#333"/>
-            <!-- Service medals on chest -->
-            <rect x="48" y="70" width="4" height="6" fill="#DC143C"/>
-            <rect x="45" y="72" width="3" height="5" fill="#FFD700"/>
-            <rect x="53" y="72" width="3" height="5" fill="#FFD700"/>
-        </svg>`;
+        // --- CHARACTER GENERATION ---
 
-        const otherCharacters = [
-            // Israeli civilian man
-            `<svg viewBox="0 0 100 150" width="50" height="75">
-                <circle cx="50" cy="30" r="18" fill="#D4A574"/>
-                <path d="M 32 30 L 28 50 L 72 50 L 68 30 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <rect x="32" y="50" width="36" height="45" fill="#4A90E2" stroke="#333" stroke-width="1"/>
-                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <ellipse cx="35" cy="150" rx="3" ry="2" fill="#222"/>
-                <ellipse cx="65" cy="150" rx="3" ry="2" fill="#222"/>
-            </svg>`,
-            
-            // Israeli soldier
-            `<svg viewBox="0 0 100 150" width="50" height="75">
-                <circle cx="50" cy="30" r="18" fill="#D4A574"/>
-                <rect x="35" y="28" width="30" height="6" fill="#333" rx="2"/>
-                <rect x="32" y="50" width="36" height="45" fill="#556B2F" stroke="#333" stroke-width="1"/>
-                <circle cx="45" cy="65" r="2.5" fill="#8B7355"/>
-                <circle cx="55" cy="65" r="2.5" fill="#8B7355"/>
-                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#556B2F" stroke="#333" stroke-width="1"/>
-                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#556B2F" stroke="#333" stroke-width="1"/>
-                <ellipse cx="35" cy="150" rx="3" ry="2" fill="#222"/>
-                <ellipse cx="65" cy="150" rx="3" ry="2" fill="#222"/>
-            </svg>`,
-            
-            // Woman with headscarf
-            `<svg viewBox="0 0 100 150" width="50" height="75">
-                <circle cx="50" cy="30" r="18" fill="#D4A574"/>
-                <path d="M 32 22 Q 50 15 68 22 Q 70 30 50 32 Q 30 30 32 22 Z" fill="#E74C3C" stroke="#C0392B" stroke-width="1"/>
-                <rect x="32" y="50" width="36" height="45" fill="#E8DAEF" stroke="#333" stroke-width="1"/>
-                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <ellipse cx="35" cy="150" rx="3" ry="2" fill="#222"/>
-                <ellipse cx="65" cy="150" rx="3" ry="2" fill="#222"/>
-            </svg>`,
-            
-            // Child
-            `<svg viewBox="0 0 80 120" width="40" height="60">
-                <circle cx="40" cy="25" r="14" fill="#D4A574"/>
-                <path d="M 26 25 L 22 35 L 58 35 L 54 25 Z" fill="#8B4513" stroke="#654321" stroke-width="0.5"/>
-                <rect x="26" y="38" width="28" height="35" fill="#FFD700" stroke="#333" stroke-width="0.5"/>
-                <path d="M 26 73 L 24 120 L 32 120 L 34 73 Z" fill="#333" stroke="#222" stroke-width="0.5"/>
-                <path d="M 54 73 L 56 120 L 48 120 L 46 73 Z" fill="#333" stroke="#222" stroke-width="0.5"/>
-            </svg>`,
-            
-            // Elderly person with cane
-            `<svg viewBox="0 0 100 160" width="50" height="80">
-                <circle cx="50" cy="32" r="17" fill="#C4A57B"/>
-                <path d="M 35 32 L 30 50 L 70 50 L 65 32 Z" fill="white" stroke="#999" stroke-width="1"/>
-                <rect x="34" y="52" width="32" height="40" fill="#7F8C8D" stroke="#333" stroke-width="1"/>
-                <path d="M 34 92 L 32 155 L 40 155 L 42 92 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <path d="M 66 92 L 68 155 L 60 155 L 58 92 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <line x1="20" y1="50" x2="18" y2="155" stroke="#8B4513" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="17" cy="155" r="2" fill="#666"/>
-            </svg>`,
-            
-            // Tourist with camera
-            `<svg viewBox="0 0 100 150" width="50" height="75">
-                <circle cx="50" cy="30" r="18" fill="#E0AC69"/>
-                <rect x="35" y="28" width="30" height="5" fill="#FFD700" stroke="#FFA500" stroke-width="0.5"/>
-                <rect x="32" y="50" width="36" height="45" fill="#FF6B6B" stroke="#333" stroke-width="1"/>
-                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#333" stroke="#222" stroke-width="1"/>
-                <circle cx="72" cy="60" r="8" fill="#333" stroke="#222" stroke-width="1"/>
-                <circle cx="73" cy="60" r="5" fill="#666"/>
-            </svg>`,
-            
-            // Man in traditional attire
-            `<svg viewBox="0 0 100 150" width="50" height="75">
-                <circle cx="50" cy="30" r="18" fill="#8D5524"/>
-                <path d="M 32 28 L 30 50 L 70 50 L 68 28 Z" fill="#8B4513" stroke="#654321" stroke-width="1"/>
-                <rect x="32" y="50" width="36" height="45" fill="#2C1810" stroke="#1a0f0a" stroke-width="1"/>
-                <path d="M 32 95 L 30 150 L 40 150 L 42 95 Z" fill="#2C1810" stroke="#1a0f0a" stroke-width="1"/>
-                <path d="M 68 95 L 70 150 L 60 150 L 58 95 Z" fill="#2C1810" stroke="#1a0f0a" stroke-width="1"/>
-                <circle cx="50" cy="60" r="3" fill="#FFD700"/>
-            </svg>`
-        ];
+        const containerDiv = document.getElementById('characters-container');
 
-        const spawnZones = [
-            // Knesset area (Jerusalem)
-            { minX: 200, maxX: 600, minY: 300, maxY: 800, landmark: "הכנסת" },
-            // Western Wall (Jerusalem)
-            { minX: 700, maxX: 1100, minY: 400, maxY: 900, landmark: "הכותל" },
-            // Tel Aviv beach
-            { minX: 1200, maxX: 1700, minY: 1500, maxY: 2000, landmark: "תל אביב" },
-            // Jaffa
-            { minX: 1800, maxX: 2200, minY: 1600, maxY: 2100, landmark: "יפו" },
-            // Dead Sea
-            { minX: 2300, maxX: 2800, minY: 1800, maxY: 2400, landmark: "ים המלח" },
-            // Masada
-            { minX: 2900, maxX: 3400, minY: 2100, maxY: 2600, landmark: "מצדה" },
-            // Eilat
-            { minX: 3500, maxX: 4000, minY: 2500, maxY: 3200, landmark: "אילת" },
-            // Hebrew University area
-            { minX: 800, maxX: 1300, minY: 1000, maxY: 1500, landmark: "האוניברסיטה" },
-            // Haifa area
-            { minX: 600, maxX: 1000, minY: 1200, maxY: 1700, landmark: "חיפה" }
-        ];
+        // Spawn Zones Configuration for Mahane Yehuda
+        // The image is 2500x1667.
+        // The market path forms a rough triangle / trapezoid from the middle towards the bottom.
+        // We'll define a walkable zone in the bottom 45% of the screen.
+        const spawnZone = {
+            minX: 200,
+            maxX: 2300,
+            minY: 900,  // Further back in the market
+            maxY: 1600  // Closer to the camera
+        };
 
-        const containerDiv = document.getElementById('characters-container') || board;
         const characters = [];
-        const numCharacters = 600;
-        
-        let benGurionPosition = null;
+        const numCharacters = 250; // Dense crowd
 
-        // Generate characters
+        // Generate characters with overlap prevention and depth scaling
         for (let i = 0; i < numCharacters; i++) {
             let validPosition = false;
-            let x, y, scaleRatio, zone;
+            let x, y, scaleRatio;
             let attempts = 0;
 
-            while (!validPosition && attempts < 100) {
-                zone = spawnZones[Math.floor(Math.random() * spawnZones.length)];
-                x = zone.minX + Math.random() * (zone.maxX - zone.minX);
-                y = zone.minY + Math.random() * (zone.maxY - zone.minY);
+            // Try to find a non-overlapping spot
+            while (!validPosition && attempts < 150) {
+                x = spawnZone.minX + Math.random() * (spawnZone.maxX - spawnZone.minX);
+                y = spawnZone.minY + Math.random() * (spawnZone.maxY - spawnZone.minY);
 
+                // For the market perspective, the aisle narrows towards the center.
+                // Let's create a rough trapezoid boundary to keep people mostly in the central path
+                // At minY (900), X should be between 900 and 1600.
+                // At maxY (1600), X should be between 200 and 2300.
+                const depthRatio = (y - spawnZone.minY) / (spawnZone.maxY - spawnZone.minY); // 0 to 1
+
+                const leftBound = 900 - (700 * depthRatio);
+                const rightBound = 1600 + (700 * depthRatio);
+
+                if (x < leftBound || x > rightBound) {
+                    attempts++;
+                    continue; // Out of bounds of the market path
+                }
+
+                // Check distance to all other characters to prevent messy overlaps
                 validPosition = true;
                 for (const char of characters) {
                     const dx = char.x - x;
                     const dy = char.y - y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    if (dist < 30) {
+
+                    // Prevent them from being exactly on top of each other
+                    if (dist < 40) {
                         validPosition = false;
                         break;
                     }
@@ -469,63 +335,58 @@
                 attempts++;
             }
 
-            const depth = (y - zone.minY) / (zone.maxY - zone.minY);
-            scaleRatio = 0.6 + depth * 0.7;
+            // Layering / Perspective:
+            // Further up the screen (smaller Y) means smaller scale.
+            // Y goes from 900 to 1600.
+            const depth = (y - spawnZone.minY) / (spawnZone.maxY - spawnZone.minY); // 0 to 1
+            scaleRatio = 0.3 + depth * 1.2; // Scales from 0.3 (far) to 1.5 (close)
 
-            const isBenGurion = i === Math.floor(numCharacters * 0.35); // Hide him mid-crowd
-            
+            // Randomly select a portrait ID for Pravatar (1 to 70)
+            const randomAvatarId = Math.floor(Math.random() * 70) + 1;
+
             characters.push({
                 id: `char-${i}`,
-                type: isBenGurion ? 'ben_gurion' : otherCharacters[Math.floor(Math.random() * otherCharacters.length)],
+                isTarget: i === 0, // 0 is Ben-Gurion
+                avatarId: randomAvatarId,
                 x: x,
                 y: y,
                 scale: scaleRatio,
-                zIndex: Math.floor(y),
-                isBenGurion: isBenGurion,
-                zone: zone.landmark
+                zIndex: Math.floor(y) // Higher Y (closer) = higher z-index
             });
-
-            if (isBenGurion) {
-                benGurionPosition = { x, y, zone: zone.landmark };
-            }
         }
 
+        // Sort characters by Y (z-index) so DOM paints them back-to-front
         characters.sort((a, b) => a.y - b.y);
-
-        // Add landmark signs
-        spawnZones.forEach(zone => {
-            const sign = document.createElement('div');
-            sign.className = 'landmark-sign';
-            sign.textContent = zone.landmark;
-            sign.style.left = `${(zone.minX + zone.maxX) / 2}px`;
-            sign.style.top = `${zone.minY - 30}px`;
-            board.appendChild(sign);
-        });
 
         // Render characters
         characters.forEach(char => {
             const el = document.createElement('div');
-            el.className = 'character' + (char.isBenGurion ? ' ben-gurion' : '');
-            
-            if (char.isBenGurion) {
-                el.innerHTML = benGurionSVG;
+            el.className = 'character';
+
+            if (char.isTarget) {
+                el.classList.add('ben-gurion');
             } else {
-                el.innerHTML = char.type;
+                // Using pravatar for generic diverse crowd faces
+                el.style.backgroundImage = `url('https://i.pravatar.cc/100?img=${char.avatarId}')`;
             }
-            
-            el.style.left = `${char.x - 27}px`;
-            el.style.top = `${char.y - 85}px`;
+
+            // Base size for character cutouts is 80x80
+            const size = 80;
+            el.style.width = `${size}px`;
+            el.style.height = `${size}px`;
+
+            el.style.left = `${char.x - (size/2)}px`; // Center horizontally
+            el.style.top = `${char.y - (size/2)}px`; // Center vertically
+
             el.style.transform = `scale(${char.scale})`;
             el.style.zIndex = char.zIndex;
 
-            if (Math.random() > 0.5) {
-                const svgEl = el.querySelector('svg');
-                if (svgEl) {
-                    svgEl.style.transform = 'scaleX(-1)';
-                }
+            // Flip randomly for variety (only generic characters)
+            if (!char.isTarget && Math.random() > 0.5) {
+                el.style.transform = `scale(${char.scale}) scaleX(-1)`;
             }
 
-            if (char.isBenGurion) {
+            if (char.isTarget) {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (isFound) return;
@@ -537,39 +398,21 @@
                     document.getElementById('final-time').textContent = `${minutes}:${seconds}`;
                     document.getElementById('win-modal').style.display = 'flex';
                 });
+
             } else {
                 el.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    el.style.filter = 'brightness(0.8)';
+                    // Clicked wrong person, maybe visual feedback?
+                    el.style.border = "3px solid red";
                     setTimeout(() => {
-                        el.style.filter = 'brightness(1)';
+                        el.style.border = "3px solid white";
                     }, 300);
                 });
             }
 
-            board.appendChild(el);
+            containerDiv.appendChild(el);
         });
 
-        // Hint system
-        const hints = [
-            "בן גוריון לובש מדי חאקי וצבע הפנים שלו קצת כהה",
-            "אתה מחפש אדם בגיל מבוגר עם שערות לבנות מאוד מיוחדות!",
-            "הוא קרוב לאילת או לים המלח",
-            "תראה בשכבה של אנשים קצת יותר קרוב לקדמית",
-            `בן גוריון מסתתר בסביבת ${benGurionPosition?.zone || 'אתר כלשהו'}!`
-        ];
-
-        function showHint() {
-            if (isFound || hints_used >= hints.length) return;
-            const hint = hints[hints_used];
-            alert(`💡 רמז: ${hint}`);
-            hints_used++;
-        }
-
-        document.getElementById('hint-panel').addEventListener('click', showHint);
-
-        // Disable right-click
-        document.addEventListener('contextmenu', (e) => e.preventDefault());
     </script>
 </body>
 </html>
