@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Where's Ben-Gurion?</title>
     <style>
+
 body, html {
     margin: 0;
     padding: 0;
@@ -130,6 +131,32 @@ body, html {
     display: none !important;
 }
 
+
+  .hidden { display: none !important; }
+  #modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+  }
+  .modal {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+  .modal h2 { font-size: 2rem; color: #4CAF50; margin-bottom: 20px; }
+  .modal p { font-size: 1.2rem; margin-bottom: 30px; }
+  .modal button {
+      padding: 10px 20px;
+      font-size: 1.2rem;
+      background: #4CAF50; color: white;
+      border: none; border-radius: 5px; cursor: pointer;
+  }
 </style>
   </head>
   <body>
@@ -526,5 +553,14 @@ function updateTransform() {
 init();
 
 </script>
+
+    <!-- Win Modal -->
+    <div id="win-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; flex-direction:column; color:white; font-family:sans-serif;">
+        <h1 style="font-size:3rem; margin-bottom:10px; color:#FFD700;">Kol Hakavod!</h1>
+        <h2 style="font-size:2rem; margin-bottom:20px;">You found Ben-Gurion!</h2>
+        <p id="win-time" style="font-size:1.5rem; margin-bottom:30px;"></p>
+        <button onclick="nextLevel()" style="padding:15px 30px; font-size:1.5rem; background:#4CAF50; color:white; border:none; border-radius:8px; cursor:pointer; box-shadow:0 4px 6px rgba(0,0,0,0.3);">Next Level / Restart</button>
+    </div>
 </body>
+
 </html>
